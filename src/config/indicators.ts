@@ -16,7 +16,7 @@ export const INDICATORS: IndicatorConfig[] = [
   { sheet:'BT', indicator:'BT', pillar:'Partner', evaluator:'equals1' },
   { sheet:'SS', indicator:'SS', pillar:'Partner', evaluator:'equals1' },
   { sheet:'NPS', indicator:'NPS', pillar:'Cliente', evaluator:'gt70' },
-  { sheet:'Desempeño', indicator:'Desempeño', pillar:'Cliente', evaluator:'gt60pct' },
+  { sheet:'Desempeño', indicator:'Desempeño', pillar:'Cliente', evaluator:'gt70pct' },
   { sheet:'Conexion', indicator:'Conexion', pillar:'Cliente', evaluator:'gt60pct' },
   { sheet:'Bebida', indicator:'Bebida', pillar:'Cliente', evaluator:'gt70pct' },
   { sheet:'SR% ', indicator:'SR%', pillar:'Cliente', evaluator:'gt0' },
