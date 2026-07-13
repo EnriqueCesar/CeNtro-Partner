@@ -27,29 +27,28 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
 
-      - name: Instalar dependencias limpias
-        run: |
-          rm -rf node_modules
-          rm -f package-lock.json
-          npm cache clean --force
-          npm install
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Validar TypeScript
+        run: npm run check
 
       - name: Compilar aplicación
         run: npm run build
 
-      - name: Validar carpeta dist
+      - name: Validar salida
         run: |
           test -f dist/index.html
           test -d dist/assets
-
-      - name: Agregar .nojekyll
-        run: touch dist/.nojekyll
+          test -f "dist/data/Base_CeNtro Partner.xlsx"
+          touch dist/.nojekyll
 
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Subir carpeta dist
+      - name: Subir aplicación
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./dist
