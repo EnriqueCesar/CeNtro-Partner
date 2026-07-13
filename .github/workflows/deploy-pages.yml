@@ -2,8 +2,7 @@ name: Deploy CeNtro Partner to GitHub Pages
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -12,7 +11,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  group: github-pages
   cancel-in-progress: true
 
 jobs:
@@ -26,29 +25,41 @@ jobs:
       - name: Configurar Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
-      - name: Instalar dependencias
-        run: npm ci
+      - name: Instalar dependencias limpias
+        run: |
+          rm -rf node_modules
+          npm install --package-lock=false --include=dev --no-audit --no-fund
+
+      - name: Verificar dependencias esenciales
+        run: |
+          test -d node_modules/react
+          test -d node_modules/react-dom
+          test -d node_modules/typescript
+          test -d node_modules/vite
+          test -d node_modules/xlsx
 
       - name: Validar TypeScript
         run: npm run check
 
-      - name: Compilar aplicación
+      - name: Compilar aplicacion
         run: npm run build
 
-      - name: Validar salida
+      - name: Validar salida de produccion
         run: |
           test -f dist/index.html
           test -d dist/assets
           test -f "dist/data/Base_CeNtro Partner.xlsx"
+          ! grep -q '/src/main.tsx' dist/index.html
+          ! grep -q '%BASE_URL%' dist/index.html
           touch dist/.nojekyll
 
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Subir aplicación
+      - name: Subir aplicacion compilada
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./dist
@@ -57,7 +68,6 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-
     runs-on: ubuntu-latest
     needs: build
 
