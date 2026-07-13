@@ -30,7 +30,7 @@ export const INDICATORS: IndicatorConfig[] = [
 
 export const PILLARS: Exclude<Pillar,'Todos'>[] = ['Partner','Cliente','Negocio']
 export const REQUIRED_SHEETS = ['Directorio','Instrucciones',...INDICATORS.map(i=>i.sheet)]
-export const PERIODS = ['ene','feb','mar','abr','may','jun','YTD'] as const
+export const PERIODS = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic','YTD'] as const
 
 export const normalize = (value: unknown) => String(value ?? '')
   .normalize('NFD').replace(/[\u0300-\u036f]/g,'')

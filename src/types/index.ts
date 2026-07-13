@@ -1,4 +1,4 @@
-export type Period = 'ene'|'feb'|'mar'|'abr'|'may'|'jun'|'YTD'
+export type Period = 'ene'|'feb'|'mar'|'abr'|'may'|'jun'|'jul'|'ago'|'sep'|'oct'|'nov'|'dic'|'YTD'
 export type Pillar = 'Todos'|'Partner'|'Cliente'|'Negocio'
 export type LoadStage = 'idle'|'loading'|'validating'|'processing'|'ready'|'error'
 export interface DirectoryRow { CeCo: string; Tienda: string; DM: string }

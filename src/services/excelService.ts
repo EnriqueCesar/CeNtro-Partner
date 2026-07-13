@@ -47,7 +47,7 @@ const findPeriodKey = (record: Row, period: Period) => {
   const direct = findKey(record, period)
   if (direct) return direct
   if (period === 'YTD') {
-    for (const fallback of ['jun','may','abr','mar','feb','ene']) {
+    for (const fallback of ['dic','nov','oct','sep','ago','jul','jun','may','abr','mar','feb','ene']) {
       const found = findKey(record, fallback)
       if (found) return found
     }
@@ -161,9 +161,23 @@ export async function parseWorkbook(buffer: ArrayBuffer, fileName: string, perio
   }
 }
 
+let defaultWorkbookBuffer: Promise<ArrayBuffer> | null = null
+
+function fetchDefaultWorkbook() {
+  if (!defaultWorkbookBuffer) {
+    const url = new URL(`${import.meta.env.BASE_URL}data/Base_CeNtro%20Partner.xlsx`, window.location.origin)
+    defaultWorkbookBuffer = fetch(url.toString(), { cache:'no-store' }).then(async response => {
+      if (!response.ok) throw new Error(`No fue posible cargar el Excel predeterminado (HTTP ${response.status}).`)
+      return response.arrayBuffer()
+    }).catch(error => {
+      defaultWorkbookBuffer = null
+      throw error
+    })
+  }
+  return defaultWorkbookBuffer
+}
+
 export async function loadDefault(period: Period='YTD') {
-  const url = new URL(`${import.meta.env.BASE_URL}data/Base_CeNtro%20Partner.xlsx`, window.location.origin)
-  const response = await fetch(url.toString(), { cache:'no-store' })
-  if (!response.ok) throw new Error(`No fue posible cargar el Excel predeterminado (HTTP ${response.status}).`)
-  return parseWorkbook(await response.arrayBuffer(),'Base_CeNtro Partner.xlsx',period)
+  const buffer = await fetchDefaultWorkbook()
+  return parseWorkbook(buffer.slice(0),'Base_CeNtro Partner.xlsx',period)
 }
