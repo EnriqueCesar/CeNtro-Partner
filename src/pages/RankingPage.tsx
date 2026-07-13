@@ -7,7 +7,7 @@ import { StatCard } from '../components/StatCard'
 import { useData } from '../components/DataContext'
 import type { IndicatorValue, Month, Period, Pillar, StoreResult } from '../types'
 
-const groupCounts = { Partner:7, Cliente:5, Negocio:6 } as const
+const groupCounts = { Partner:8, Cliente:5, Negocio:6 } as const
 const months: Month[] = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
 const pillars: Pillar[] = ['Todos','Partner','Cliente','Negocio']
 const percentIndicators = new Set(['Rotacion','Desempeño','Conexion','Bebida','SR%','VMT%','ppto%','AT%','COGS'])
@@ -17,7 +17,8 @@ const visibleIndicatorNames: Record<string,string> = {
   'Estabilidad 24M':'E-24M',
 }
 
-type RankSort = 'desc'|'asc'
+type SortDirection = 'desc'|'asc'
+type SortColumn = 'rank'|'compliance'
 
 function isExplicitNA(value: unknown) { return typeof value === 'string' && /^\s*n\/?a\s*$/i.test(value) }
 function formatValue(item: IndicatorValue) {
@@ -66,12 +67,16 @@ function indicatorsForStore(store: StoreResult) {
 
 export function RankingPage() {
   const { data, stores, stage, error, retry, selectedPeriods, togglePeriod, selectAllMonths, clearMonths, pillar, setPillar, dm, setDm, dms, visibleIndicatorCount } = useData()
-  const [rankSort, setRankSort] = useState<RankSort>('asc')
+  const [sortColumn, setSortColumn] = useState<SortColumn>('rank')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
 
-  const sortedStores = useMemo(
-    () => [...stores].sort((a,b) => rankSort === 'desc' ? b.rank - a.rank : a.rank - b.rank),
-    [stores, rankSort],
-  )
+  const sortedStores = useMemo(() => [...stores].sort((a,b) => {
+    if (sortColumn === 'compliance') {
+      const difference = sortDirection === 'desc' ? b.compliance - a.compliance : a.compliance - b.compliance
+      return difference || a.rank - b.rank
+    }
+    return sortDirection === 'desc' ? b.rank - a.rank : a.rank - b.rank
+  }), [stores, sortColumn, sortDirection])
 
   if (stage !== 'ready' && stage !== 'error' && !data) return <LoadingPanel stage={stage} />
   if (stage === 'error') return <RecoveryPanel message={error} onRetry={retry} />
@@ -87,7 +92,13 @@ export function RankingPage() {
   )
 
   function toggleRankSort() {
-    setRankSort(current => current === 'desc' ? 'asc' : 'desc')
+    setSortDirection(current => sortColumn === 'rank' ? (current === 'desc' ? 'asc' : 'desc') : 'desc')
+    setSortColumn('rank')
+  }
+
+  function toggleComplianceSort() {
+    setSortDirection(current => sortColumn === 'compliance' ? (current === 'desc' ? 'asc' : 'desc') : 'desc')
+    setSortColumn('compliance')
   }
 
   function exportRanking() {
@@ -204,12 +215,12 @@ export function RankingPage() {
       </div>
       <div className="ranking-scroll"><table className="ranking-table">
         <thead><tr className="group-row"><th rowSpan={2} className="sticky-col store-col">Tienda</th><th rowSpan={2} className="rank-col">
-          <button type="button" onClick={toggleRankSort} className="inline-flex items-center gap-1.5" title={rankSort === 'desc' ? 'Ordenar de menor a mayor' : 'Ordenar de mayor a menor'}>
-            Ranking Región {rankSort === 'desc' ? <ArrowDown size={14} /> : <ArrowUp size={14} />}
+          <button type="button" onClick={toggleRankSort} className="inline-flex items-center gap-1.5" title={sortColumn === 'rank' && sortDirection === 'desc' ? 'Ordenar de menor a mayor' : 'Ordenar de mayor a menor'}>
+            Ranking Región {sortColumn === 'rank' && sortDirection === 'desc' ? <ArrowDown size={14} /> : <ArrowUp size={14} />}
           </button>
         </th>
           {activeGroups.map(group => <th key={group} colSpan={groupCounts[group]} className={`group-${group.toLowerCase()}`}>{group}</th>)}<th colSpan={1} className="group-gestion">Gestión</th></tr>
-          <tr>{displayedIndicators.map(indicator => <th key={indicator.indicator}>{visibleIndicatorName(indicator.indicator)}</th>)}<th>Cumplimiento</th></tr></thead>
+          <tr>{displayedIndicators.map(indicator => <th key={indicator.indicator}>{visibleIndicatorName(indicator.indicator)}</th>)}<th><button type="button" onClick={toggleComplianceSort} className="inline-flex items-center gap-1.5" title={sortColumn === 'compliance' && sortDirection === 'desc' ? 'Ordenar de menor a mayor' : 'Ordenar de mayor a menor'}>Cumplimiento {sortColumn === 'compliance' && sortDirection === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />}</button></th></tr></thead>
         <tbody>{sortedStores.map(store => {
           const indicatorMap = new Map(store.indicators.map(indicator => [indicator.indicator, indicator]))
           return <tr key={store.CeCo}><td className="sticky-col store-col font-semibold text-slate-900">{store.Tienda}</td><td className="rank-col"><span className="rank-badge">{store.rank}</span></td>

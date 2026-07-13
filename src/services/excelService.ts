@@ -47,6 +47,7 @@ function evaluate(config: IndicatorConfig, value: unknown): number | null {
   switch(config.evaluator) {
     case 'lte36pct': return percentage !== null && percentage <= 0.36 ? 1 : 0
     case 'lte0': return number <= 0 ? 1 : 0
+    case 'lte1': return number <= 1 ? 1 : 0
     case 'equals1': return number === 1 ? 1 : 0
     case 'gt70': return number > 70 ? 1 : 0
     case 'gt60pct': return percentage !== null && percentage > 0.60 ? 1 : 0
@@ -168,7 +169,12 @@ function buildIndicator(source: WorkbookSource, config: IndicatorConfig, ceco: s
   }
 
   if (logic.includes('suma los valores') || logic.includes('contar aquellos datos 1 o 0')) {
-    return aggregateEvaluable(config, instruction, months.map(month => monthValues.get(month)))
+    const result = aggregateEvaluable(config, instruction, months.map(month => monthValues.get(month)))
+    if (normalize(config.indicator) === normalize('Bajas') && result.applicable > 0) {
+      const total = validMonthEntries.reduce((sum,[,value]) => sum + (numeric(value) ?? 0), 0)
+      return { ...result, value:total, displayValue:String(total) }
+    }
+    return result
   }
 
   if (isYTD) {
@@ -268,7 +274,7 @@ function parseSource(buffer: ArrayBuffer, fileName: string): WorkbookSource {
   const missingInstructionRows = INDICATORS.filter(config => !instructions.has(normalize(config.sheet))).map(config => config.sheet)
   if (missingInstructionRows.length) throw new Error(`Instrucciones no contiene lógica para: ${missingInstructionRows.join(', ')}.`)
   baseSheetAudits.push({ sheet:instructionsName, found:true, rows:instructionRows.length, headers:Object.keys(instructionRows[0]), missingHeaders:[], validCeCos:0, duplicateCeCos:[] })
-  baseAudit.push({ level:'ok', category:'Instrucciones', message:'Se leyeron Ponderacion, Logica Selección Mes Multiple y Logica YTD para los 18 indicadores.' })
+  baseAudit.push({ level:'ok', category:'Instrucciones', message:`Se leyeron Ponderacion, Logica Selección Mes Multiple y Logica YTD para los ${INDICATORS.length} indicadores.` })
 
   const indicatorSheets = new Map<string,IndicatorSheet>()
   INDICATORS.forEach(config => {

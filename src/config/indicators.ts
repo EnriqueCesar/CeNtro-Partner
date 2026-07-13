@@ -4,12 +4,13 @@ export interface IndicatorConfig {
   sheet: string
   indicator: string
   pillar: Exclude<Pillar,'Todos'>
-  evaluator: 'lte36pct'|'lte0'|'equals1'|'gt70'|'gt60pct'|'gt70pct'|'gt0'|'gt1'|'between09pct'|'gt7'
+  evaluator: 'lte36pct'|'lte0'|'lte1'|'equals1'|'gt70'|'gt60pct'|'gt70pct'|'gt0'|'gt1'|'between09pct'|'gt7'
 }
 
 export const INDICATORS: IndicatorConfig[] = [
   { sheet:'Rotacion', indicator:'Rotacion', pillar:'Partner', evaluator:'lte36pct' },
   { sheet:'Bajas<90', indicator:'Bajas<90', pillar:'Partner', evaluator:'lte0' },
+  { sheet:'Bajas', indicator:'Bajas', pillar:'Partner', evaluator:'lte1' },
   { sheet:'Estabilidad 12M', indicator:'Estabilidad 12M', pillar:'Partner', evaluator:'equals1' },
   { sheet:'Estabilidad 24M', indicator:'Estabilidad 24M', pillar:'Partner', evaluator:'equals1' },
   { sheet:'BB', indicator:'BB', pillar:'Partner', evaluator:'equals1' },
