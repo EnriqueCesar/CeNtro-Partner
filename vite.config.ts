@@ -15,7 +15,7 @@ export default defineConfig({
         'assets/CeNtro Partner.png',
         'data/Base_CeNtro Partner.xlsx',
         'icons/icon-192.png',
-        'icons/icon-512.png'
+        'icons/icon-512.png',
       ],
       manifest: {
         id: BASE,
@@ -29,8 +29,8 @@ export default defineConfig({
         display: 'standalone',
         icons: [
           { src: `${BASE}icons/icon-192.png`, sizes: '192x192', type: 'image/png' },
-          { src: `${BASE}icons/icon-512.png`, sizes: '512x512', type: 'image/png' }
-        ]
+          { src: `${BASE}icons/icon-512.png`, sizes: '512x512', type: 'image/png' },
+        ],
       },
       workbox: {
         cleanupOutdatedCaches: true,
@@ -43,14 +43,19 @@ export default defineConfig({
             urlPattern: ({ url }) => url.pathname.endsWith('.xlsx'),
             handler: 'NetworkFirst',
             options: {
-              cacheName: 'centro-partner-excel-v2',
+              cacheName: 'centro-partner-excel-v2-1',
               networkTimeoutSeconds: 8,
-              expiration: { maxEntries: 3, maxAgeSeconds: 86400 }
-            }
-          }
-        ]
-      }
-    })
+              expiration: { maxEntries: 2, maxAgeSeconds: 86400 },
+            },
+          },
+        ],
+      },
+    }),
   ],
-  build: { outDir: 'dist', emptyOutDir: true, sourcemap: false, target: 'es2020' }
+  build: {
+    outDir: 'dist',
+    emptyOutDir: true,
+    sourcemap: false,
+    target: 'es2020',
+  },
 })

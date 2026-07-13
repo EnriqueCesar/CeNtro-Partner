@@ -1,21 +1,13 @@
-# CeNtro Partner V2 — Ranking Regional
+# CeNtro Partner V2
 
-PWA ejecutiva de una sola vista para consultar el Ranking Regional con 18 indicadores de Partner, Cliente y Negocio.
+Vista única de Ranking Regional para GitHub Pages.
 
-## GitHub Pages
-
-- Repositorio: `CeNtro-Partner`
-- Método: **Deploy from a branch**
-- Rama: `main`
-- Carpeta: `/docs`
-- Base configurada: `/CeNtro-Partner/`
-
-La base se carga automáticamente desde `public/data/Base_CeNtro Partner.xlsx` y todo el procesamiento ocurre localmente en el navegador.
-
-## Desarrollo
+## Validación
 
 ```bash
 npm ci
-npm run dev
+npm run check
 npm run build
 ```
+
+La publicación se realiza mediante `.github/workflows/deploy-pages.yml` desde la carpeta compilada `dist`.
