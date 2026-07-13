@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root{font-family:Inter,Aptos,"Segoe UI",sans-serif;color:#17211d;background:#f6f8f7;font-synthesis:none}
+*{box-sizing:border-box}
+body{margin:0;min-width:320px}
+.card{@apply rounded-2xl border border-slate-200 bg-white p-5}
+.control{@apply mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 outline-none transition focus:border-starbucks focus:ring-2 focus:ring-starbucks/10}
+.filter-label{@apply text-xs font-semibold uppercase tracking-wide text-slate-500}
+.primary-button{@apply inline-flex items-center justify-center gap-2 rounded-xl bg-starbucks px-4 py-2.5 text-sm font-bold text-white transition hover:bg-starbucks-dark}
+.section-heading{@apply mb-0 flex flex-wrap items-center justify-between gap-3}
+.section-title{@apply m-0 text-lg font-bold text-slate-900}
+.eyebrow{@apply mb-1 text-xs font-semibold uppercase tracking-widest text-starbucks}
+.summary-chip{@apply rounded-full bg-starbucks-light px-3 py-1 text-xs font-bold text-starbucks-dark}
+.recovery-card{@apply mx-auto flex max-w-2xl flex-col items-start gap-4 rounded-3xl border border-amber-200 bg-white p-7 text-amber-700}
+.status-row{@apply flex items-center gap-3 rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-400}
+.status-row.active{@apply border-starbucks/30 bg-starbucks-light text-starbucks}
+.status-row.done{@apply border-emerald-200 bg-emerald-50 text-emerald-700}
+.status-dot{@apply h-5 w-5 rounded-full border-2 border-current}
+.ranking-scroll{overflow-x:auto;overscroll-behavior-inline:contain;scrollbar-gutter:stable}
+.ranking-table{width:max-content;min-width:100%;border-collapse:separate;border-spacing:0;text-align:center;font-size:.78rem}
+.ranking-table th{white-space:nowrap;border-right:1px solid #e2e8f0;border-bottom:1px solid #cbd5e1;padding:.7rem .65rem;background:#f8fafc;color:#475569;font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.035em}
+.ranking-table td{min-width:88px;border-right:1px solid #edf2f7;border-bottom:1px solid #edf2f7;padding:.65rem;white-space:nowrap;background:#fff}
+.ranking-table tbody tr:hover td{background:#f8fafc}
+.ranking-table .sticky-col{position:sticky;left:0;z-index:3;text-align:left}
+.ranking-table thead .sticky-col{z-index:5}
+.store-col{min-width:220px!important;max-width:260px;white-space:normal!important}
+.rank-col{min-width:96px!important}
+.group-row th{color:#fff;border-bottom:0}
+.group-row .store-col,.group-row .rank-col{background:#004c34}
+.group-partner{background:#006241!important}.group-cliente{background:#18794e!important}.group-negocio{background:#2f6b56!important}.group-gestion{background:#004c34!important}
+.rank-badge{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:999px;background:#006241;color:#fff;font-weight:800}
+.indicator-cell{color:#94a3b8}
+.indicator-cell.is-ok{background:#e8f5ee!important;color:#087443;font-weight:800}
+.indicator-cell.is-bad{background:#fdecec!important;color:#b42318;font-weight:800}
+.indicator-cell.is-na{background:#eef2f6!important;color:#64748b;font-weight:800}
+.compliance-cell{background:#f0f8f4!important;min-width:112px!important}
+.compliance-badge{display:inline-flex;border-radius:999px;background:#006241;color:#fff;padding:.4rem .65rem;font-weight:800}
+@media(max-width:640px){.card{@apply rounded-xl}.store-col{min-width:170px!important;max-width:190px}.ranking-table th,.ranking-table td{padding:.55rem .5rem}}
