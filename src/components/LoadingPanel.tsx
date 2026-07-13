@@ -1,5 +1,0 @@
-import { CheckCircle2, LoaderCircle } from 'lucide-react'
-import type { LoadStage } from '../types'
-const steps:[LoadStage,string][]=[['loading','Cargando base'],['validating','Validando estructura'],['processing','Procesando indicadores'],['ready','Ranking listo']]
-const order:LoadStage[]=['idle','loading','validating','processing','ready','error']
-export function LoadingPanel({stage}:{stage:LoadStage}){const current=order.indexOf(stage);return <section className="card mx-auto max-w-2xl"><div className="mb-5 flex items-center gap-3 text-starbucks"><LoaderCircle className="animate-spin"/><div><p className="eyebrow">Preparando CeNtro Partner</p><h2 className="text-xl font-bold">Procesamiento local seguro</h2></div></div><div className="space-y-3">{steps.map(([key,label])=>{const done=current>order.indexOf(key);const active=stage===key;return <div key={key} className={`status-row ${done?'done':active?'active':''}`}>{done?<CheckCircle2 size={20}/>:<span className="status-dot"/>}<span>{label}</span></div>})}</div></section>}
