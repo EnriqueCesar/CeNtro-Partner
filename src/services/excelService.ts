@@ -147,7 +147,9 @@ export async function parseWorkbook(buffer: ArrayBuffer, fileName: string, perio
   let stores = directory.map(store => summarize(store, INDICATORS.map(config=>{
     const value = valueMaps.get(config.sheet)?.get(store.CeCo) ?? null
     const score = evaluate(config,value)
-    return {sheet:config.sheet,indicator:config.indicator,pillar:config.pillar,rule:ruleBySheet.get(normalize(config.sheet))??'',value,score,status:score===null?'na':score===1?'cumple':'no-cumple'}
+    const blank = value === null || value === undefined || value === ''
+    const explicitNA = typeof value === 'string' && /^\s*n\/?a\s*$/i.test(value)
+    return {sheet:config.sheet,indicator:config.indicator,pillar:config.pillar,rule:ruleBySheet.get(normalize(config.sheet))??'',value,score,status:score===null?(explicitNA?'na':blank?'blank':'na'):score===1?'cumple':'no-cumple'}
   })))
   stores = stores.sort((a,b)=>b.compliance-a.compliance || b.fulfilled-a.fulfilled || a.CeCo.localeCompare(b.CeCo)).map((s,i)=>({...s,rank:i+1}))
   audit.push({level:'ok',category:'Ranking',message:`Ranking generado con ${stores.length} tiendas y ${INDICATORS.length} indicadores.`})

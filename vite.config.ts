@@ -52,5 +52,5 @@ export default defineConfig({
       }
     })
   ],
-  build: { sourcemap: false, target: 'es2020' }
+  build: { outDir: 'docs', emptyOutDir: true, sourcemap: false, target: 'es2020' }
 })

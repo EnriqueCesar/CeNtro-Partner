@@ -1,20 +1,14 @@
-# Validación CeNtro Partner V2
+# Validación V2 Ranking
 
-- npm ci: OK
-- npm run check: OK
-- npm run build: OK
-- TypeScript: sin errores
-- Vite base: /CeNtro-Partner/
-- HashRouter: activo
-- dist/index.html: generado
-- dist JS/CSS: generado
-- Excel en dist/data: presente
-- Imagen en dist/assets: presente
-- Manifest y service worker: generados
-- HTTP local index: 200
-- HTTP local Excel: 200
-- HTTP local imagen: 200
-- HTTP local manifest: 200
-- 18 indicadores: detectados y procesados
-- N/A: excluido del denominador
-- Ranking: cumplimiento, cumplidos y CeCo
+- Build TypeScript + Vite: correcto.
+- Base de GitHub Pages: `/CeNtro-Partner/`.
+- Salida lista para Deploy from Branch: `/docs`.
+- Excel incluido y cargado automáticamente.
+- Directorio procesado: 72 CeCo únicos.
+- Indicadores procesados: 18 por tienda.
+- Mejor tienda YTD validada: Town Center Nicolás Romero, 92.9%.
+- N/A y vacíos excluidos del denominador.
+- Vista única: Ranking Regional.
+- Eliminados de la interfaz: Dashboard, Auditoría, carga manual, archivo activo, CeCo, DM, cumplidos, no cumplidos y N/A.
+- Tabla agrupada por Partner, Cliente, Negocio y Gestión.
+- Scroll horizontal y primera columna fija para móvil.

@@ -9,7 +9,7 @@ export interface IndicatorValue {
   rule: string
   value: unknown
   score: number | null
-  status: 'cumple'|'no-cumple'|'na'
+  status: 'cumple'|'no-cumple'|'na'|'blank'
 }
 export interface StoreResult extends DirectoryRow {
   indicators: IndicatorValue[]

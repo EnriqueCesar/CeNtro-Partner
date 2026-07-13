@@ -1,5 +1,16 @@
-import { BarChart3, ClipboardCheck, Menu, Trophy, X } from 'lucide-react'
-import { useState } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
-const nav=[['/','Dashboard',BarChart3],['/ranking','Ranking Regional',Trophy],['/auditoria','Auditoría',ClipboardCheck]] as const
-export function AppLayout(){const[open,setOpen]=useState(false);return <div className="min-h-screen bg-slate-50"><button className="fixed left-4 top-4 z-50 rounded-xl border bg-white p-2 lg:hidden" onClick={()=>setOpen(!open)} aria-label="Abrir navegación">{open?<X/>:<Menu/>}</button>{open&&<button className="fixed inset-0 z-30 bg-black/20 lg:hidden" onClick={()=>setOpen(false)} aria-label="Cerrar navegación"/>}<aside className={`fixed inset-y-0 left-0 z-40 w-72 border-r border-slate-200 bg-white p-5 transition-transform lg:translate-x-0 ${open?'translate-x-0':'-translate-x-full'}`}><img src={`${import.meta.env.BASE_URL}assets/CeNtro Partner.png`} alt="CeNtro Partner" className="mx-auto h-28 w-28 rounded-full object-cover"/><h1 className="mt-3 text-center text-xl font-bold text-starbucks">CeNtro Partner</h1><p className="text-center text-xs tracking-widest text-slate-500">OPS + RH · CENTRO NORTE</p><nav className="mt-8 space-y-2">{nav.map(([to,label,Icon])=><NavLink key={to} end={to==='/'} to={to} onClick={()=>setOpen(false)} className={({isActive})=>`flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm font-semibold ${isActive?'border-starbucks bg-starbucks text-white':'border-transparent text-slate-600 hover:border-starbucks/20 hover:text-starbucks'}`}><Icon size={19}/>{label}</NavLink>)}</nav><div className="mt-8 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-xs text-emerald-800"><p className="font-bold">V2 estable</p><p className="mt-1">Procesamiento local · GitHub Pages · PWA</p></div></aside><main className="lg:ml-72"><header className="border-b bg-white px-6 py-5 pl-16 lg:px-10"><p className="text-sm text-slate-500">Región Centro Norte</p><h2 className="text-2xl font-bold">Visibilidad ejecutiva de indicadores</h2></header><div className="p-4 sm:p-6 lg:p-10"><Outlet/></div></main></div>}
+import type { ReactNode } from 'react'
+
+export function AppLayout({ children }: { children: ReactNode }) {
+  return <div className="min-h-screen bg-slate-50">
+    <header className="border-b border-slate-200 bg-white">
+      <div className="mx-auto flex max-w-[1800px] items-center gap-4 px-4 py-4 sm:px-6 lg:px-8">
+        <img src={`${import.meta.env.BASE_URL}assets/CeNtro Partner.png`} alt="CeNtro Partner" className="h-14 w-14 rounded-2xl object-cover" />
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-starbucks">Región Centro Norte</p>
+          <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">Ranking Regional</h1>
+        </div>
+      </div>
+    </header>
+    <main className="mx-auto max-w-[1800px] p-4 sm:p-6 lg:p-8">{children}</main>
+  </div>
+}
