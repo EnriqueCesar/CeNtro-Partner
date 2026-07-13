@@ -1,14 +1,23 @@
-import { Building2, Check, ChevronDown, CircleGauge, ListChecks, Trophy } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import * as XLSX from 'xlsx'
+import { ArrowDown, ArrowUp, Building2, Check, ChevronDown, CircleGauge, Download, ListChecks, Trophy } from 'lucide-react'
 import { LoadingPanel } from '../components/LoadingPanel'
 import { RecoveryPanel } from '../components/RecoveryPanel'
 import { StatCard } from '../components/StatCard'
 import { useData } from '../components/DataContext'
-import type { IndicatorValue, Month, Period, Pillar } from '../types'
+import type { IndicatorValue, Month, Period, Pillar, StoreResult } from '../types'
 
 const groupCounts = { Partner:7, Cliente:5, Negocio:6 } as const
 const months: Month[] = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
 const pillars: Pillar[] = ['Todos','Partner','Cliente','Negocio']
 const percentIndicators = new Set(['Rotacion','Desempeño','Conexion','Bebida','SR%','VMT%','ppto%','AT%','COGS'])
+const clientIndicatorOrder = ['NPS','Conexion','Desempeño','Bebida','SR%']
+const visibleIndicatorNames: Record<string,string> = {
+  'Estabilidad 12M':'E-12M',
+  'Estabilidad 24M':'E-24M',
+}
+
+type RankSort = 'desc'|'asc'
 
 function isExplicitNA(value: unknown) { return typeof value === 'string' && /^\s*n\/?a\s*$/i.test(value) }
 function formatValue(item: IndicatorValue) {
@@ -30,15 +39,40 @@ function stateClass(item: IndicatorValue) {
   if (item.status === 'na') return 'indicator-cell is-na'
   return 'indicator-cell'
 }
+function stateLabel(item: IndicatorValue) {
+  if (item.status === 'cumple') return 'Cumple'
+  if (item.status === 'no-cumple') return 'No cumple'
+  if (item.status === 'na') return 'N/A'
+  return 'Vacío'
+}
 function selectionLabel(selection: Period[]) {
   if (selection.includes('YTD')) return 'YTD'
   if (!selection.length) return 'Selecciona meses'
   if (selection.length === 12) return 'Todos los meses'
   return selection.map(period => period.toUpperCase()).join(', ')
 }
+function visibleIndicatorName(indicator: string) {
+  return visibleIndicatorNames[indicator] ?? indicator
+}
+function orderIndicators(indicators: IndicatorValue[]) {
+  return [...indicators].sort((a,b) => {
+    if (a.pillar !== 'Cliente' || b.pillar !== 'Cliente') return 0
+    return clientIndicatorOrder.indexOf(a.indicator) - clientIndicatorOrder.indexOf(b.indicator)
+  })
+}
+function indicatorsForStore(store: StoreResult) {
+  return orderIndicators(store.indicators)
+}
 
 export function RankingPage() {
   const { data, stores, stage, error, retry, selectedPeriods, togglePeriod, selectAllMonths, clearMonths, pillar, setPillar, dm, setDm, dms, visibleIndicatorCount } = useData()
+  const [rankSort, setRankSort] = useState<RankSort>('asc')
+
+  const sortedStores = useMemo(
+    () => [...stores].sort((a,b) => rankSort === 'desc' ? b.rank - a.rank : a.rank - b.rank),
+    [stores, rankSort],
+  )
+
   if (stage !== 'ready' && stage !== 'error' && !data) return <LoadingPanel stage={stage} />
   if (stage === 'error') return <RecoveryPanel message={error} onRetry={retry} />
 
@@ -46,6 +80,72 @@ export function RankingPage() {
   const best = stores[0]
   const activeGroups = pillar === 'Todos' ? (['Partner','Cliente','Negocio'] as const) : ([pillar] as const)
   const title = selectionLabel(selectedPeriods)
+  const displayedIndicators = orderIndicators(
+    stores[0]?.indicators
+      ?? data?.stores[0]?.indicators.filter(indicator => pillar === 'Todos' || indicator.pillar === pillar)
+      ?? [],
+  )
+
+  function toggleRankSort() {
+    setRankSort(current => current === 'desc' ? 'asc' : 'desc')
+  }
+
+  function exportRanking() {
+    const firstHeader = ['Tienda','Ranking Región']
+    const secondHeader = ['','']
+    const merges: XLSX.Range[] = [
+      { s:{ r:0, c:0 }, e:{ r:1, c:0 } },
+      { s:{ r:0, c:1 }, e:{ r:1, c:1 } },
+    ]
+    let column = 2
+
+    activeGroups.forEach(group => {
+      const groupIndicators = displayedIndicators.filter(indicator => indicator.pillar === group)
+      if (!groupIndicators.length) return
+      firstHeader.push(group, ...Array(groupIndicators.length - 1).fill(''))
+      secondHeader.push(...groupIndicators.map(indicator => visibleIndicatorName(indicator.indicator)))
+      merges.push({ s:{ r:0, c:column }, e:{ r:0, c:column + groupIndicators.length - 1 } })
+      column += groupIndicators.length
+    })
+
+    firstHeader.push('Gestión')
+    secondHeader.push('Cumplimiento')
+    merges.push({ s:{ r:0, c:column }, e:{ r:0, c:column } })
+
+    const rows = sortedStores.map(store => {
+      const indicatorMap = new Map(indicatorsForStore(store).map(indicator => [indicator.indicator, indicator]))
+      return [
+        store.Tienda,
+        store.rank,
+        ...displayedIndicators.map(indicator => formatValue(indicatorMap.get(indicator.indicator) ?? indicator)),
+        `${(store.compliance * 100).toFixed(1)}%`,
+      ]
+    })
+
+    const worksheet = XLSX.utils.aoa_to_sheet([firstHeader, secondHeader, ...rows])
+    worksheet['!merges'] = merges
+    worksheet['!cols'] = [
+      { wch:30 },
+      { wch:16 },
+      ...displayedIndicators.map(indicator => ({ wch:Math.max(10, visibleIndicatorName(indicator.indicator).length + 2) })),
+      { wch:16 },
+    ]
+    worksheet['!autofilter'] = { ref:XLSX.utils.encode_range({ s:{ r:1, c:0 }, e:{ r:rows.length + 1, c:secondHeader.length - 1 } }) }
+
+    sortedStores.forEach((store,rowIndex) => {
+      const indicatorMap = new Map(indicatorsForStore(store).map(indicator => [indicator.indicator, indicator]))
+      displayedIndicators.forEach((indicator,indicatorIndex) => {
+        const current = indicatorMap.get(indicator.indicator) ?? indicator
+        const address = XLSX.utils.encode_cell({ r:rowIndex + 2, c:indicatorIndex + 2 })
+        const cell = worksheet[address] as XLSX.CellObject & { c?: Array<{ a:string; t:string }> }
+        if (cell) cell.c = [{ a:'CeNtro Partner', t:`Estado: ${stateLabel(current)}` }]
+      })
+    })
+
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Ranking Regional')
+    XLSX.writeFile(workbook, 'CeNtro_Partner_Ranking.xlsx', { compression:true })
+  }
 
   return <>
     <section className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -95,13 +195,29 @@ export function RankingPage() {
     </section>
 
     <section className="card overflow-hidden p-0">
-      <div className="section-heading border-b border-slate-200 px-5 py-4"><div><p className="eyebrow">Clasificación dinámica</p><h2 className="section-title">Ranking Regional</h2></div><span className="summary-chip">{stores.length} tiendas</span></div>
+      <div className="section-heading border-b border-slate-200 px-5 py-4">
+        <div><p className="eyebrow">Clasificación dinámica</p><h2 className="section-title">Ranking Regional</h2></div>
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={exportRanking} className="inline-flex items-center gap-2 rounded-lg border border-starbucks/20 px-3 py-2 text-xs font-bold text-starbucks hover:bg-starbucks-light"><Download size={15} />Exportar Excel</button>
+          <span className="summary-chip">{stores.length} tiendas</span>
+        </div>
+      </div>
       <div className="ranking-scroll"><table className="ranking-table">
-        <thead><tr className="group-row"><th rowSpan={2} className="sticky-col store-col">Tienda</th><th rowSpan={2} className="rank-col">Ranking Región</th>
+        <thead><tr className="group-row"><th rowSpan={2} className="sticky-col store-col">Tienda</th><th rowSpan={2} className="rank-col">
+          <button type="button" onClick={toggleRankSort} className="inline-flex items-center gap-1.5" title={rankSort === 'desc' ? 'Ordenar de menor a mayor' : 'Ordenar de mayor a menor'}>
+            Ranking Región {rankSort === 'desc' ? <ArrowDown size={14} /> : <ArrowUp size={14} />}
+          </button>
+        </th>
           {activeGroups.map(group => <th key={group} colSpan={groupCounts[group]} className={`group-${group.toLowerCase()}`}>{group}</th>)}<th colSpan={1} className="group-gestion">Gestión</th></tr>
-          <tr>{(stores[0]?.indicators ?? data?.stores[0]?.indicators.filter(indicator => pillar === 'Todos' || indicator.pillar === pillar) ?? []).map(indicator => <th key={indicator.indicator}>{indicator.indicator}</th>)}<th>Cumplimiento</th></tr></thead>
-        <tbody>{stores.map(store => <tr key={store.CeCo}><td className="sticky-col store-col font-semibold text-slate-900">{store.Tienda}</td><td className="rank-col"><span className="rank-badge">{store.rank}</span></td>
-          {store.indicators.map(indicator => <td key={indicator.indicator} className={stateClass(indicator)}>{formatValue(indicator)}</td>)}<td className="compliance-cell"><span className="compliance-badge">{(store.compliance * 100).toFixed(1)}%</span></td></tr>)}</tbody>
+          <tr>{displayedIndicators.map(indicator => <th key={indicator.indicator}>{visibleIndicatorName(indicator.indicator)}</th>)}<th>Cumplimiento</th></tr></thead>
+        <tbody>{sortedStores.map(store => {
+          const indicatorMap = new Map(store.indicators.map(indicator => [indicator.indicator, indicator]))
+          return <tr key={store.CeCo}><td className="sticky-col store-col font-semibold text-slate-900">{store.Tienda}</td><td className="rank-col"><span className="rank-badge">{store.rank}</span></td>
+            {displayedIndicators.map(indicator => {
+              const current = indicatorMap.get(indicator.indicator) ?? indicator
+              return <td key={current.indicator} className={stateClass(current)}>{formatValue(current)}</td>
+            })}<td className="compliance-cell"><span className="compliance-badge">{(store.compliance * 100).toFixed(1)}%</span></td></tr>
+        })}</tbody>
       </table></div>
     </section>
   </>
