@@ -1,4 +1,5 @@
-export type Period = 'ene'|'feb'|'mar'|'abr'|'may'|'jun'|'jul'|'ago'|'sep'|'oct'|'nov'|'dic'|'YTD'
+export type Month = 'ene'|'feb'|'mar'|'abr'|'may'|'jun'|'jul'|'ago'|'sep'|'oct'|'nov'|'dic'
+export type Period = Month|'YTD'
 export type Pillar = 'Todos'|'Partner'|'Cliente'|'Negocio'
 export type LoadStage = 'idle'|'loading'|'validating'|'processing'|'ready'|'error'
 export interface DirectoryRow { CeCo: string; Tienda: string; DM: string }
@@ -7,8 +8,13 @@ export interface IndicatorValue {
   indicator: string
   pillar: Exclude<Pillar,'Todos'>
   rule: string
+  multipleMonthLogic: string
+  ytdLogic: string
   value: unknown
+  displayValue?: string
   score: number | null
+  fulfilled: number
+  applicable: number
   status: 'cumple'|'no-cumple'|'na'|'blank'
 }
 export interface StoreResult extends DirectoryRow {
@@ -35,6 +41,7 @@ export interface WorkbookResult {
   audit: AuditItem[]
   sheets: SheetAudit[]
   periods: Period[]
+  selectedPeriods: Period[]
   fileName: string
   processedAt: string
   foundSheets: string[]
