@@ -1,130 +1,167 @@
 import * as XLSX from 'xlsx'
-import { SHEETS, indicatorPillar, normalize } from '../config/indicators'
-import type { AuditItem, DirectoryRow, IndicatorValue, Period, StoreResult, WorkbookResult } from '../types'
+import { INDICATORS, PERIODS, REQUIRED_SHEETS, normalize, type IndicatorConfig } from '../config/indicators'
+import type { AuditItem, DirectoryRow, IndicatorValue, Period, SheetAudit, StoreResult, WorkbookResult } from '../types'
 
+type Row = Record<string, unknown>
 const findSheet = (wb: XLSX.WorkBook, expected: string) => wb.SheetNames.find(n => normalize(n) === normalize(expected))
-const rows = (ws: XLSX.WorkSheet) => XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: null, raw: true })
-const key = (obj: Record<string, unknown>, expected: string) => Object.keys(obj).find(k => normalize(k) === normalize(expected))
-const cleanCeCo = (value: unknown) => String(value ?? '').replace(/\D/g,'').padStart(5,'0').slice(-5)
+const toRows = (ws: XLSX.WorkSheet) => XLSX.utils.sheet_to_json<Row>(ws, { defval: null, raw: true, blankrows: false })
+const findKey = (obj: Row, expected: string) => Object.keys(obj).find(k => normalize(k) === normalize(expected))
+const cleanCeCo = (value: unknown) => {
+  const digits = String(value ?? '').trim().replace(/\.0+$/,'').replace(/\D/g,'')
+  return digits ? digits.padStart(5,'0') : ''
+}
 const numeric = (value: unknown): number | null => {
   if (value === null || value === undefined || value === '') return null
   if (typeof value === 'number') return Number.isFinite(value) ? value : null
-  const raw = String(value).replace(/\u00a0/g,' ').replace(/[$%]/g,'').replace(/,/g,'.').trim()
-  const parsed = Number(raw)
+  const text = String(value).trim()
+  if (!text || /^n\/?a$/i.test(text)) return null
+  const normalized = text.replace(/\u00a0/g,'').replace(/[$%]/g,'').replace(/,/g,'.')
+  const parsed = Number(normalized)
   return Number.isFinite(parsed) ? parsed : null
 }
-const ratio = (value: unknown): number | null => {
+const ratio = (value: unknown) => {
   const n = numeric(value)
   if (n === null) return null
   return Math.abs(n) > 1.5 ? n / 100 : n
 }
 
-function score(indicator: string, value: unknown): number | null {
+function evaluate(config: IndicatorConfig, value: unknown): number | null {
   const n = numeric(value)
-  if (n === null) return null
   const p = ratio(value)
-  switch (normalize(indicator)) {
-    case 'rotacion': return p !== null && p <= 0.36 ? 1 : 0
-    case 'bajas<90': return n <= 0 ? 1 : 0
-    case 'estabilidad 12m':
-    case 'estabilidad 24m':
-    case 'bb': case 'bt': case 'ss': return p !== null && p >= 1 ? 1 : 0
-    case 'nps': return n >= 70 ? 1 : 0
-    case 'desempeno': return p !== null && p >= 0.60 ? 1 : 0
-    case 'conexion':
-    case 'bebida': return p !== null && p >= 0.70 ? 1 : 0
-    case 'sr%': return p !== null && p > 0 ? 1 : 0
-    case 'adt aa': return n > 1 ? 1 : 0
-    case 'vmt aa%':
-    case 'v ppto':
-    case 'v at aa%': return p !== null && p > 0 ? 1 : 0
-    case 'vcogs': return p !== null && p >= -0.009 && p <= 0.009 ? 1 : 0
-    case 'segundascx': return n > 7 ? 1 : 0
-    default: return null
+  if (n === null) return null
+  switch(config.evaluator) {
+    case 'lte36pct': return p !== null && p <= 0.36 ? 1 : 0
+    case 'lte0': return n <= 0 ? 1 : 0
+    case 'equals1': return n === 1 ? 1 : 0
+    case 'gt70': return n > 70 ? 1 : 0
+    case 'gt60pct': return p !== null && p > 0.60 ? 1 : 0
+    case 'gt70pct': return p !== null && p > 0.70 ? 1 : 0
+    case 'gt0': return n > 0 ? 1 : 0
+    case 'gt1': return n > 1 ? 1 : 0
+    case 'between09pct': return p !== null && p >= -0.009 && p <= 0.009 ? 1 : 0
+    case 'gt7': return n > 7 ? 1 : 0
   }
 }
 
-function findPeriodKey(record: Record<string, unknown>, period: Period): string | undefined {
-  const direct = key(record, period)
+const findPeriodKey = (record: Row, period: Period) => {
+  const direct = findKey(record, period)
   if (direct) return direct
   if (period === 'YTD') {
     for (const fallback of ['jun','may','abr','mar','feb','ene']) {
-      const found = key(record, fallback)
+      const found = findKey(record, fallback)
       if (found) return found
     }
   }
   return undefined
 }
 
+function summarize(store: DirectoryRow, indicators: IndicatorValue[]): StoreResult {
+  const fulfilled = indicators.filter(i=>i.score===1).length
+  const failed = indicators.filter(i=>i.score===0).length
+  const na = indicators.filter(i=>i.score===null).length
+  const applicable = fulfilled + failed
+  return { ...store, indicators, fulfilled, failed, na, applicable, compliance: applicable ? fulfilled/applicable : 0, rank:0 }
+}
+
 export async function parseWorkbook(buffer: ArrayBuffer, fileName: string, period: Period='YTD'): Promise<WorkbookResult> {
   const audit: AuditItem[] = []
-  const wb = XLSX.read(buffer, { type: 'array', cellDates: true })
+  const sheetAudits: SheetAudit[] = []
+  let wb: XLSX.WorkBook
+  try { wb = XLSX.read(buffer, { type:'array', cellDates:true }) }
+  catch { throw new Error('El archivo no pudo abrirse como libro de Excel válido.') }
 
-  const dirName = findSheet(wb, SHEETS.directory)
-  const instructionsName = findSheet(wb, SHEETS.instructions)
-  if (!dirName) throw new Error('No existe la pestaña Directorio.')
-  if (!instructionsName) audit.push({ level:'warning', message:'No se encontró la pestaña Instrucciones.' })
-  else audit.push({ level:'ok', message:'Pestaña Instrucciones localizada correctamente.' })
+  const missingSheets = REQUIRED_SHEETS.filter(s=>!findSheet(wb,s))
+  const foundSheets = REQUIRED_SHEETS.filter(s=>Boolean(findSheet(wb,s)))
+  if (missingSheets.length) audit.push({level:'error',category:'Estructura',message:`Pestañas faltantes: ${missingSheets.join(', ')}`})
+  else audit.push({level:'ok',category:'Estructura',message:'Se localizaron Directorio, Instrucciones y los 18 indicadores.'})
 
-  const directoryRows = rows(wb.Sheets[dirName])
-  if (!directoryRows.length) throw new Error('La pestaña Directorio no contiene datos.')
-  const cecoKey = key(directoryRows[0], 'CeCo')
-  const storeKey = key(directoryRows[0], 'Tienda')
-  const dmKey = key(directoryRows[0], 'DM')
-  if (!cecoKey || !storeKey || !dmKey) throw new Error('Directorio requiere encabezados CeCo, Tienda y DM.')
+  const dirName = findSheet(wb,'Directorio')
+  if (!dirName) throw new Error('Falta la pestaña obligatoria Directorio.')
+  const directoryRows = toRows(wb.Sheets[dirName])
+  if (!directoryRows.length) throw new Error('La pestaña Directorio no contiene registros.')
+  const cecoKey = findKey(directoryRows[0],'CeCo')
+  const storeKey = findKey(directoryRows[0],'Tienda')
+  const dmKey = findKey(directoryRows[0],'DM')
+  const missingDirHeaders = [['CeCo',cecoKey],['Tienda',storeKey],['DM',dmKey]].filter(([,k])=>!k).map(([h])=>h as string)
+  if (missingDirHeaders.length) throw new Error(`Directorio requiere encabezados: ${missingDirHeaders.join(', ')}.`)
 
   const seen = new Set<string>()
+  const duplicateDirectoryCeCos: string[] = []
   const directory: DirectoryRow[] = []
   for (const row of directoryRows) {
-    const CeCo = cleanCeCo(row[cecoKey])
-    if (!/^\d{5}$/.test(CeCo) || seen.has(CeCo)) continue
+    const CeCo = cleanCeCo(row[cecoKey!])
+    if (!/^\d{5}$/.test(CeCo)) continue
+    if (seen.has(CeCo)) { duplicateDirectoryCeCos.push(CeCo); continue }
     seen.add(CeCo)
-    directory.push({ CeCo, Tienda:String(row[storeKey] ?? '').trim(), DM:String(row[dmKey] ?? '').trim() })
+    directory.push({CeCo,Tienda:String(row[storeKey!]??'').trim(),DM:String(row[dmKey!]??'').trim()})
   }
-  audit.push({ level:'ok', message:`Directorio validado: ${directory.length} tiendas únicas por CeCo.` })
+  sheetAudits.push({sheet:dirName,found:true,rows:directoryRows.length,headers:Object.keys(directoryRows[0]),missingHeaders:missingDirHeaders,validCeCos:directory.length,duplicateCeCos:duplicateDirectoryCeCos})
+  audit.push({level:'ok',category:'Directorio',message:`${directory.length} CeCo válidos y únicos procesados.`})
+  if (duplicateDirectoryCeCos.length) audit.push({level:'warning',category:'Directorio',message:`CeCo duplicados omitidos: ${Array.from(new Set(duplicateDirectoryCeCos)).join(', ')}`})
 
-  const maps = new Map<string, Map<string, unknown>>()
-  for (const indicator of SHEETS.indicators) {
-    const sheetName = findSheet(wb, indicator)
-    if (!sheetName) { audit.push({level:'error', message:`Falta pestaña: ${indicator.trim()}`}); continue }
-    const data = rows(wb.Sheets[sheetName])
-    if (!data.length) { audit.push({level:'warning', message:`Pestaña vacía: ${indicator.trim()}`}); continue }
-    const ck = key(data[0], 'CeCo')
-    const pk = findPeriodKey(data[0], period)
-    if (!ck || !pk) { audit.push({level:'error', message:`${indicator.trim()}: falta CeCo o periodo ${period}`}); continue }
-    if (period === 'YTD' && normalize(pk) !== 'ytd') {
-      audit.push({level:'warning', message:`${indicator.trim()}: sin YTD; se usa ${pk} como último periodo disponible.`})
-    }
-    const values = new Map<string, unknown>()
-    for (const row of data) {
-      const ceco = cleanCeCo(row[ck])
-      if (/^\d{5}$/.test(ceco)) values.set(ceco, row[pk])
-    }
-    maps.set(indicator, values)
-    audit.push({level:'ok', message:`${indicator.trim()}: ${values.size} CeCo procesados.`})
+  const instructionName = findSheet(wb,'Instrucciones')
+  const ruleBySheet = new Map<string,string>()
+  if (instructionName) {
+    const instructionRows = toRows(wb.Sheets[instructionName])
+    const tabKey = instructionRows[0] && findKey(instructionRows[0],'Pestaña')
+    const ruleKey = instructionRows[0] && findKey(instructionRows[0],'Ponderacion')
+    if (tabKey && ruleKey) instructionRows.forEach(r=>ruleBySheet.set(normalize(r[tabKey]),String(r[ruleKey]??'')))
+    sheetAudits.push({sheet:instructionName,found:true,rows:instructionRows.length,headers:instructionRows[0]?Object.keys(instructionRows[0]):[],missingHeaders:[!tabKey?'Pestaña':'',!ruleKey?'Ponderacion':''].filter(Boolean),validCeCos:0,duplicateCeCos:[]})
+    audit.push({level:tabKey&&ruleKey?'ok':'warning',category:'Instrucciones',message:tabKey&&ruleKey?`${instructionRows.length} reglas de negocio localizadas.`:'La pestaña Instrucciones no contiene todos los encabezados esperados.'})
   }
 
-  let stores: StoreResult[] = directory.map(d => {
-    const indicators: IndicatorValue[] = SHEETS.indicators.map(indicator => {
-      const value = maps.get(indicator)?.get(d.CeCo) ?? null
-      const s = score(indicator, value)
-      return { indicator: indicator.trim(), pillar: indicatorPillar(indicator), value, score:s, status:s===null?'na':s===1?'cumple':'no-cumple' }
-    })
-    const applicable = indicators.filter(i => i.score !== null)
-    const compliance = applicable.length ? applicable.reduce((sum, item) => sum + (item.score ?? 0), 0) / applicable.length : 0
-    return { ...d, indicators, compliance, applicable: applicable.length, rank:0 }
-  })
+  const valueMaps = new Map<string,Map<string,unknown>>()
+  for (const config of INDICATORS) {
+    const actual = findSheet(wb,config.sheet)
+    if (!actual) {
+      sheetAudits.push({sheet:config.sheet,found:false,rows:0,headers:[],missingHeaders:['CeCo',period],validCeCos:0,duplicateCeCos:[]})
+      continue
+    }
+    const data = toRows(wb.Sheets[actual])
+    if (!data.length) {
+      sheetAudits.push({sheet:actual,found:true,rows:0,headers:[],missingHeaders:['CeCo',period],validCeCos:0,duplicateCeCos:[]})
+      audit.push({level:'warning',category:'Indicador',message:`${actual}: pestaña vacía.`})
+      continue
+    }
+    const ck = findKey(data[0],'CeCo')
+    const pk = findPeriodKey(data[0],period)
+    const missingHeaders = [!ck?'CeCo':'',!pk?period:''].filter(Boolean)
+    const duplicates: string[] = []
+    const values = new Map<string,unknown>()
+    if (ck && pk) {
+      for (const row of data) {
+        const ceco = cleanCeCo(row[ck])
+        if (!/^\d{5}$/.test(ceco)) continue
+        if (values.has(ceco)) duplicates.push(ceco)
+        values.set(ceco,row[pk])
+      }
+      valueMaps.set(config.sheet,values)
+      if (period==='YTD' && normalize(pk)!=='ytd') audit.push({level:'warning',category:'Periodo',message:`${actual}: no tiene YTD; se utilizó ${pk}.`})
+    }
+    sheetAudits.push({sheet:actual,found:true,rows:data.length,headers:Object.keys(data[0]),missingHeaders,validCeCos:values.size,duplicateCeCos:duplicates})
+    if (missingHeaders.length) audit.push({level:'error',category:'Encabezados',message:`${actual}: faltan ${missingHeaders.join(', ')}.`})
+    else audit.push({level:'ok',category:'Indicador',message:`${actual}: ${values.size} CeCo procesados para ${period}.`})
+    if (!ruleBySheet.has(normalize(config.sheet))) audit.push({level:'warning',category:'Reglas',message:`${actual}: no se encontró su regla en Instrucciones; se usa la configuración validada V2.`})
+  }
 
-  stores = stores.sort((a,b) => b.compliance-a.compliance || a.Tienda.localeCompare(b.Tienda, 'es'))
-    .map((store,index) => ({...store, rank:index+1}))
-  audit.push({level:'ok', message:`Ranking generado para ${stores.length} tiendas y 18 indicadores.`})
+  let stores = directory.map(store => summarize(store, INDICATORS.map(config=>{
+    const value = valueMaps.get(config.sheet)?.get(store.CeCo) ?? null
+    const score = evaluate(config,value)
+    return {sheet:config.sheet,indicator:config.indicator,pillar:config.pillar,rule:ruleBySheet.get(normalize(config.sheet))??'',value,score,status:score===null?'na':score===1?'cumple':'no-cumple'}
+  })))
+  stores = stores.sort((a,b)=>b.compliance-a.compliance || b.fulfilled-a.fulfilled || a.CeCo.localeCompare(b.CeCo)).map((s,i)=>({...s,rank:i+1}))
+  audit.push({level:'ok',category:'Ranking',message:`Ranking generado con ${stores.length} tiendas y ${INDICATORS.length} indicadores.`})
 
-  return { stores, audit, periods:['ene','feb','mar','abr','may','jun','YTD'], fileName }
+  return {
+    stores,audit,sheets:sheetAudits,periods:[...PERIODS],fileName,
+    processedAt:new Date().toISOString(),foundSheets,missingSheets,
+    indicatorCount:INDICATORS.length,validCeCos:directory.length,duplicateDirectoryCeCos
+  }
 }
 
 export async function loadDefault(period: Period='YTD') {
-  const url = `${import.meta.env.BASE_URL}data/Base_CeNtro Partner.xlsx`
-  const response = await fetch(url, { cache:'no-store' })
-  if (!response.ok) throw new Error(`No fue posible cargar el Excel predeterminado (${response.status}).`)
-  return parseWorkbook(await response.arrayBuffer(), 'Base_CeNtro Partner.xlsx', period)
+  const url = new URL('data/Base_CeNtro Partner.xlsx', window.location.href.replace(/#.*$/,''))
+  const response = await fetch(url.toString(), { cache:'no-store' })
+  if (!response.ok) throw new Error(`No fue posible cargar el Excel predeterminado (HTTP ${response.status}).`)
+  return parseWorkbook(await response.arrayBuffer(),'Base_CeNtro Partner.xlsx',period)
 }

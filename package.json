@@ -1,31 +1,32 @@
 {
   "name": "centro-partner",
   "private": true,
-  "version": "1.0.0",
+  "version": "2.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview",
+    "preview": "vite preview --host 0.0.0.0",
+    "check": "tsc -b --pretty false",
     "deploy": "npm run build && gh-pages -d dist"
   },
   "dependencies": {
-    "@vitejs/plugin-react": "latest",
-    "lucide-react": "latest",
-    "react": "latest",
-    "react-dom": "latest",
-    "react-router-dom": "latest",
-    "xlsx": "latest"
+    "@vitejs/plugin-react": "4.4.1",
+    "lucide-react": "0.468.0",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-router-dom": "7.6.2",
+    "xlsx": "0.18.5"
   },
   "devDependencies": {
-    "@types/react": "latest",
-    "@types/react-dom": "latest",
-    "autoprefixer": "latest",
-    "gh-pages": "latest",
-    "postcss": "latest",
+    "@types/react": "19.1.6",
+    "@types/react-dom": "19.1.5",
+    "autoprefixer": "10.4.21",
+    "gh-pages": "6.3.0",
+    "postcss": "8.5.6",
     "tailwindcss": "3.4.17",
-    "typescript": "latest",
-    "vite": "latest",
-    "vite-plugin-pwa": "latest"
+    "typescript": "5.8.3",
+    "vite": "6.3.5",
+    "vite-plugin-pwa": "1.0.0"
   }
 }

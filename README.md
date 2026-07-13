@@ -1,36 +1,40 @@
-# CeNtro Partner — V1
+# CeNtro Partner — V2 Funcional
 
-PWA ejecutiva para procesar localmente `Base_CeNtro Partner.xlsx`, evaluar 18 indicadores por CeCo y generar el Ranking Regional dinámico.
+PWA ejecutiva para procesar localmente `Base_CeNtro Partner.xlsx`, evaluar 18 indicadores y generar el Ranking Regional de la Región Centro Norte.
 
-## Funciones
-- Dashboard ejecutivo
-- Ranking Regional
-- Auditoría del Excel
-- Filtros por Mes, DM y Pilar
-- Carga automática y carga manual
-- Cálculo de cumplimiento excluyendo N/A
-- PWA instalable
-- Despliegue en GitHub Pages
+## Funciones V2
+- Dashboard, Ranking Regional y Auditoría.
+- Carga automática y reemplazo manual del Excel sin recargar la aplicación.
+- Lectura por nombre normalizado de pestaña y encabezado.
+- CeCo preservado como texto de cinco dígitos.
+- Cumplimiento: cumplidos / indicadores evaluables; N/A excluido.
+- Desempate: cumplimiento, cantidad de cumplidos y CeCo.
+- Estados de carga, validación, procesamiento, éxito y recuperación.
+- Error Boundary y captura de errores globales.
+- HashRouter compatible con GitHub Pages.
+- PWA con actualización automática y limpieza de cachés antiguas.
 
-## Ejecución
+## Desarrollo
 ```bash
 npm ci
 npm run dev
 ```
 
-## Compilación
+## Validación
 ```bash
+npm run check
 npm run build
 npm run preview
 ```
 
 ## GitHub Pages
-1. Subir el contenido del proyecto a la rama `main` del repositorio `EnriqueCesar/CeNtro-Partner`.
-2. En **Settings > Pages**, seleccionar **GitHub Actions**.
-3. El workflow `.github/workflows/deploy.yml` compilará y publicará la aplicación en `/CeNtro-Partner/`.
+El repositorio objetivo es `EnriqueCesar/CeNtro-Partner` y Vite usa:
+```ts
+base: '/CeNtro-Partner/'
+```
 
-## Archivos de datos
+En **Settings > Pages**, seleccionar **GitHub Actions**. El workflow compila y publica exclusivamente `dist`.
+
+## Archivos obligatorios
 - `public/data/Base_CeNtro Partner.xlsx`
 - `public/assets/CeNtro Partner.png`
-
-La lectura se realiza por nombres normalizados de pestañas y encabezados. La llave única es `CeCo` como texto de 5 dígitos.
