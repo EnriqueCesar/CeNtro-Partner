@@ -160,7 +160,7 @@ export async function parseWorkbook(buffer: ArrayBuffer, fileName: string, perio
 }
 
 export async function loadDefault(period: Period='YTD') {
-  const url = new URL('data/Base_CeNtro Partner.xlsx', window.location.href.replace(/#.*$/,''))
+  const url = new URL(`${import.meta.env.BASE_URL}data/Base_CeNtro%20Partner.xlsx`, window.location.origin)
   const response = await fetch(url.toString(), { cache:'no-store' })
   if (!response.ok) throw new Error(`No fue posible cargar el Excel predeterminado (HTTP ${response.status}).`)
   return parseWorkbook(await response.arrayBuffer(),'Base_CeNtro Partner.xlsx',period)
