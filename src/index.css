@@ -109,3 +109,53 @@ body{margin:0;min-width:320px}
     max-width:78px;
   }
 }
+
+/* Executive compliance cell and desktop presentation mode. */
+.presentation-button,.presentation-exit-button{
+  display:none;
+  align-items:center;
+  gap:.5rem;
+  border-radius:.65rem;
+  padding:.5rem .75rem;
+  font-size:.75rem;
+  font-weight:800;
+  transition:background-color .15s ease,border-color .15s ease,color .15s ease;
+}
+.presentation-button{border:1px solid #cbd5e1;background:#fff;color:#334155}
+.presentation-button:hover{border-color:#8aa99d;background:#f3f8f5;color:#006241}
+.presentation-exit-button{border:1px solid #006241;background:#006241;color:#fff}
+.presentation-exit-button:hover{background:#004c34}
+.compliance-cell{
+  padding:.42rem!important;
+  background:var(--compliance-surface)!important;
+  color:var(--compliance-ink)!important;
+}
+.compliance-meter{
+  position:relative;
+  display:grid;
+  min-height:34px;
+  place-items:center;
+  overflow:hidden;
+  border:1px solid var(--compliance-border);
+  border-radius:.6rem;
+  background:rgba(255,255,255,.42);
+}
+.compliance-progress{
+  position:absolute;
+  inset:0 auto 0 0;
+  width:var(--compliance-progress);
+  background:var(--compliance-fill);
+  opacity:.22;
+}
+.compliance-value{position:relative;z-index:1;font-weight:900;letter-spacing:.01em}
+.ranking-table tbody tr:hover .compliance-cell{background:var(--compliance-surface)!important}
+@media(min-width:1024px){
+  .presentation-button,.presentation-exit-button{display:inline-flex}
+  .presentation-mode .dashboard-summary,
+  .presentation-mode .ranking-filters,
+  .presentation-mode .secondary-ranking-control{display:none!important}
+  .presentation-mode{margin:-1rem}
+  .presentation-mode>section.card{border-radius:0;border-left:0;border-right:0}
+  .presentation-mode .ranking-scroll{max-height:calc(100vh - 170px);overflow:auto}
+  .presentation-mode .ranking-table{min-width:100%}
+}

@@ -1,6 +1,6 @@
 import { useMemo, useState, type CSSProperties } from 'react'
 import * as XLSX from 'xlsx'
-import { ArrowDown, ArrowUp, Building2, Check, ChevronDown, CircleGauge, Download, ListChecks, Trophy } from 'lucide-react'
+import { ArrowDown, ArrowUp, Building2, Check, ChevronDown, CircleGauge, Download, ListChecks, MonitorUp, Trophy, X } from 'lucide-react'
 import { LoadingPanel } from '../components/LoadingPanel'
 import { RecoveryPanel } from '../components/RecoveryPanel'
 import { StatCard } from '../components/StatCard'
@@ -92,16 +92,28 @@ function complianceQuartiles(values: number[]): ComplianceQuartiles {
 }
 
 function complianceQuartileStyle(value: number, quartiles: ComplianceQuartiles): CSSProperties {
-  if (value >= quartiles.q3) return { backgroundColor:'#dff3e8', color:'#075b3a', boxShadow:'inset 0 0 0 1px #9fd3b8' }
-  if (value >= quartiles.q2) return { backgroundColor:'#fff3bf', color:'#6b5700', boxShadow:'inset 0 0 0 1px #e9cf63' }
-  if (value >= quartiles.q1) return { backgroundColor:'#ffe0b2', color:'#8a4300', boxShadow:'inset 0 0 0 1px #e9a85c' }
-  return { backgroundColor:'#f9d6d5', color:'#8a1c13', boxShadow:'inset 0 0 0 1px #e39b96' }
+  const palette = value >= quartiles.q3
+    ? { surface:'#dff3e8', fill:'#087443', ink:'#064e33', border:'#8bc9a9' }
+    : value >= quartiles.q2
+      ? { surface:'#fff3bf', fill:'#d6aa00', ink:'#594900', border:'#dfc34d' }
+      : value >= quartiles.q1
+        ? { surface:'#ffe0b2', fill:'#df7500', ink:'#713800', border:'#e7a251' }
+        : { surface:'#f9d6d5', fill:'#c9362b', ink:'#7b1710', border:'#df8e89' }
+
+  return {
+    '--compliance-surface':palette.surface,
+    '--compliance-fill':palette.fill,
+    '--compliance-ink':palette.ink,
+    '--compliance-border':palette.border,
+    '--compliance-progress':`${Math.max(0, Math.min(100, value * 100))}%`,
+  } as CSSProperties
 }
 
 export function RankingPage() {
   const { data, stores, stage, error, retry, selectedPeriods, togglePeriod, selectAllMonths, clearMonths, pillar, setPillar, dm, setDm, dms, visibleIndicatorCount, area, setArea } = useData()
   const [sortColumn, setSortColumn] = useState<SortColumn>('rank')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
+  const [presentationMode, setPresentationMode] = useState(false)
 
   const sortedStores = useMemo(() => [...stores].sort((a,b) => {
     if (sortColumn === 'compliance') {
@@ -196,15 +208,15 @@ export function RankingPage() {
     XLSX.writeFile(workbook, 'CeNtro_Partner_Ranking.xlsx', { compression:true })
   }
 
-  return <>
-    <section className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+  return <div className={presentationMode ? 'presentation-mode' : undefined}>
+    <section className="dashboard-summary mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <StatCard label="Total de tiendas" value={stores.length} icon={Building2} />
       <StatCard label="Total de indicadores" value={visibleIndicatorCount} icon={ListChecks} />
       <StatCard label="Promedio de cumplimiento" value={`${(average * 100).toFixed(1)}%`} icon={CircleGauge} />
       <StatCard label="Mejor tienda" value={best?.Tienda ?? '—'} icon={Trophy} />
     </section>
 
-    <section className="card mb-5 py-4">
+    <section className="ranking-filters card mb-5 py-4">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div className="min-w-48"><p className="eyebrow">Vista ejecutiva</p><h2 className="section-title">Resultados {title}</h2></div>
         <div className="grid w-full gap-3 sm:grid-cols-2 xl:max-w-5xl xl:grid-cols-4">
@@ -250,8 +262,9 @@ export function RankingPage() {
       <div className="section-heading border-b border-slate-200 px-5 py-4">
         <div><p className="eyebrow">Clasificación dinámica</p><h2 className="section-title">Ranking Regional</h2></div>
         <div className="flex items-center gap-2">
-          <button type="button" onClick={exportRanking} className="inline-flex items-center gap-2 rounded-lg border border-starbucks/20 px-3 py-2 text-xs font-bold text-starbucks hover:bg-starbucks-light"><Download size={15} />Exportar Excel</button>
-          <span className="summary-chip">{stores.length} tiendas</span>
+          {presentationMode ? <button type="button" onClick={() => setPresentationMode(false)} className="presentation-exit-button"><X size={15} />Salir de presentación</button> : <button type="button" onClick={() => setPresentationMode(true)} className="presentation-button"><MonitorUp size={15} />Modo Presentación</button>}
+          <button type="button" onClick={exportRanking} className="secondary-ranking-control inline-flex items-center gap-2 rounded-lg border border-starbucks/20 px-3 py-2 text-xs font-bold text-starbucks hover:bg-starbucks-light"><Download size={15} />Exportar Excel</button>
+          <span className="secondary-ranking-control summary-chip">{stores.length} tiendas</span>
         </div>
       </div>
       <div className="ranking-scroll"><table className="ranking-table">
@@ -275,9 +288,9 @@ export function RankingPage() {
               className="compliance-cell"
               style={complianceQuartileStyle(store.compliance, quartiles)}
               title={`Cuartiles visibles: Q1 ${(quartiles.q1 * 100).toFixed(1)}% · Q2 ${(quartiles.q2 * 100).toFixed(1)}% · Q3 ${(quartiles.q3 * 100).toFixed(1)}%`}
-            ><span className="font-extrabold">{(store.compliance * 100).toFixed(1)}%</span></td></tr>
+            ><div className="compliance-meter" aria-label={`Cumplimiento ${(store.compliance * 100).toFixed(1)}%`}><span className="compliance-progress" aria-hidden="true" /><span className="compliance-value">{(store.compliance * 100).toFixed(1)}%</span></div></td></tr>
         })}</tbody>
       </table></div>
     </section>
-  </>
+  </div>
 }
