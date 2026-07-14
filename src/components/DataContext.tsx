@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import type { IndicatorValue, LoadStage, Month, Period, Pillar, StoreResult, WorkbookResult } from '../types'
+import type { Area, IndicatorValue, LoadStage, Month, Period, Pillar, StoreResult, WorkbookResult } from '../types'
 import { loadDefault } from '../services/excelService'
 
 const ALL_MONTHS: Month[] = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
@@ -18,9 +18,9 @@ type Ctx = {
   dm: string
   setDm: (value: string) => void
   dms: string[]
+  area: Area
+  setArea: (value: Area) => void
   visibleIndicatorCount: number
-  showBbBtSs: boolean
-  toggleBbBtSs: () => void
   retry: () => void
 }
 
@@ -41,7 +41,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [selectedPeriods, setSelectedPeriods] = useState<Period[]>(['YTD'])
   const [pillar, setPillar] = useState<Pillar>('Todos')
   const [dm, setDm] = useState('Todos')
-  const [showBbBtSs, setShowBbBtSs] = useState(true)
+  const [area, setArea] = useState<Area>('Todos')
 
   const load = useCallback(async () => {
     setError('')
@@ -81,25 +81,25 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return filteredByDistrict
       .map(store => {
         const pillarIndicators = pillar === 'Todos' ? store.indicators : store.indicators.filter(indicator => indicator.pillar === pillar)
-        const indicators = showBbBtSs ? pillarIndicators : pillarIndicators.filter(indicator => !['BB','BT','SS'].includes(indicator.indicator))
+        const indicators = area === 'Todos' ? pillarIndicators : pillarIndicators.filter(indicator => indicator.areas.includes(area))
         return { ...store, indicators, ...summarizeIndicators(indicators) }
       })
       .sort((a,b) => b.compliance - a.compliance || b.fulfilled - a.fulfilled || a.CeCo.localeCompare(b.CeCo))
       .map((store,index) => ({ ...store, rank:index + 1 }))
-  }, [data, dm, pillar, showBbBtSs])
+  }, [data, dm, pillar, area])
 
   const visibleIndicatorCount = useMemo(() => {
     const indicators = data?.stores[0]?.indicators ?? []
     return indicators.filter(indicator =>
       (pillar === 'Todos' || indicator.pillar === pillar)
-      && (showBbBtSs || !['BB','BT','SS'].includes(indicator.indicator))
+      && (area === 'Todos' || indicator.areas.includes(area))
     ).length
-  }, [data, pillar, showBbBtSs])
+  }, [data, pillar, area])
 
   return <DataContext.Provider value={{
     data, stores, stage, error, selectedPeriods, togglePeriod, selectAllMonths, clearMonths,
-    pillar, setPillar, dm, setDm, dms, visibleIndicatorCount, showBbBtSs,
-    toggleBbBtSs:() => setShowBbBtSs(current => !current), retry:() => void load(),
+    pillar, setPillar, dm, setDm, dms, area, setArea, visibleIndicatorCount,
+    retry:() => void load(),
   }}>{children}</DataContext.Provider>
 }
 

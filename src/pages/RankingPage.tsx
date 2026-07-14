@@ -1,14 +1,15 @@
 import { useMemo, useState, type CSSProperties } from 'react'
 import * as XLSX from 'xlsx'
-import { ArrowDown, ArrowUp, Building2, Check, ChevronDown, CircleGauge, Download, Eye, EyeOff, ListChecks, Trophy } from 'lucide-react'
+import { ArrowDown, ArrowUp, Building2, Check, ChevronDown, CircleGauge, Download, ListChecks, Trophy } from 'lucide-react'
 import { LoadingPanel } from '../components/LoadingPanel'
 import { RecoveryPanel } from '../components/RecoveryPanel'
 import { StatCard } from '../components/StatCard'
 import { useData } from '../components/DataContext'
-import type { IndicatorValue, Month, Period, Pillar, StoreResult } from '../types'
+import type { Area, IndicatorValue, Month, Period, Pillar, StoreResult } from '../types'
 
 const months: Month[] = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
 const pillars: Pillar[] = ['Todos','Partner','Cliente','Negocio']
+const areas: Area[] = ['Todos','Ops','RH']
 const percentIndicators = new Set(['Rotacion','Estabilidad 12M','Estabilidad 24M','Desempeño','Conexion','Bebida','SR%','VMT%','ppto%','AT%','COGS'])
 const clientIndicatorOrder = ['NPS','Conexion','Desempeño','Bebida','SR%']
 const visibleIndicatorNames: Record<string,string> = {
@@ -81,7 +82,7 @@ function complianceHeatmapStyle(value: number, minimum: number, maximum: number)
 }
 
 export function RankingPage() {
-  const { data, stores, stage, error, retry, selectedPeriods, togglePeriod, selectAllMonths, clearMonths, pillar, setPillar, dm, setDm, dms, visibleIndicatorCount, showBbBtSs, toggleBbBtSs } = useData()
+  const { data, stores, stage, error, retry, selectedPeriods, togglePeriod, selectAllMonths, clearMonths, pillar, setPillar, dm, setDm, dms, visibleIndicatorCount, area, setArea } = useData()
   const [sortColumn, setSortColumn] = useState<SortColumn>('rank')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
 
@@ -190,7 +191,7 @@ export function RankingPage() {
     <section className="card mb-5 py-4">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div className="min-w-48"><p className="eyebrow">Vista ejecutiva</p><h2 className="section-title">Resultados {title}</h2></div>
-        <div className="grid w-full gap-3 sm:grid-cols-3 xl:max-w-4xl">
+        <div className="grid w-full gap-3 sm:grid-cols-2 xl:max-w-5xl xl:grid-cols-4">
           <div className="filter-label">Mes
             <details className="month-picker group relative mt-1">
               <summary className="control flex cursor-pointer list-none items-center justify-between normal-case tracking-normal">
@@ -219,6 +220,9 @@ export function RankingPage() {
           <label className="filter-label">Pilar
             <select value={pillar} onChange={event => setPillar(event.target.value as Pillar)} className="control">{pillars.map(value => <option key={value}>{value}</option>)}</select>
           </label>
+          <label className="filter-label">Área
+            <select value={area} onChange={event => setArea(event.target.value as Area)} className="control">{areas.map(value => <option key={value}>{value}</option>)}</select>
+          </label>
           <label className="filter-label">Distrito
             <select value={dm} onChange={event => setDm(event.target.value)} className="control"><option>Todos</option>{dms.map(value => <option key={value}>{value}</option>)}</select>
           </label>
@@ -230,10 +234,6 @@ export function RankingPage() {
       <div className="section-heading border-b border-slate-200 px-5 py-4">
         <div><p className="eyebrow">Clasificación dinámica</p><h2 className="section-title">Ranking Regional</h2></div>
         <div className="flex items-center gap-2">
-          <button type="button" onClick={toggleBbBtSs} className="inline-flex items-center gap-2 rounded-lg border border-starbucks/20 px-3 py-2 text-xs font-bold text-starbucks hover:bg-starbucks-light">
-            {showBbBtSs ? <EyeOff size={15} /> : <Eye size={15} />}
-            {showBbBtSs ? 'Ocultar BB / BT / SS' : 'Mostrar BB / BT / SS'}
-          </button>
           <button type="button" onClick={exportRanking} className="inline-flex items-center gap-2 rounded-lg border border-starbucks/20 px-3 py-2 text-xs font-bold text-starbucks hover:bg-starbucks-light"><Download size={15} />Exportar Excel</button>
           <span className="summary-chip">{stores.length} tiendas</span>
         </div>

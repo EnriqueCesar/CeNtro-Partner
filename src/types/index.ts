@@ -1,12 +1,15 @@
 export type Month = 'ene'|'feb'|'mar'|'abr'|'may'|'jun'|'jul'|'ago'|'sep'|'oct'|'nov'|'dic'
 export type Period = Month|'YTD'
 export type Pillar = 'Todos'|'Partner'|'Cliente'|'Negocio'
+export type Area = 'Todos'|'Ops'|'RH'
+export type IndicatorArea = Exclude<Area,'Todos'>
 export type LoadStage = 'idle'|'loading'|'validating'|'processing'|'ready'|'error'
 export interface DirectoryRow { CeCo: string; Tienda: string; DM: string }
 export interface IndicatorValue {
   sheet: string
   indicator: string
   pillar: Exclude<Pillar,'Todos'>
+  areas: IndicatorArea[]
   rule: string
   multipleMonthLogic: string
   ytdLogic: string

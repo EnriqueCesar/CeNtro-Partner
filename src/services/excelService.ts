@@ -1,9 +1,9 @@
 import * as XLSX from 'xlsx'
 import { INDICATORS, PERIODS, REQUIRED_SHEETS, normalize, type IndicatorConfig } from '../config/indicators'
-import type { AuditItem, DirectoryRow, IndicatorValue, Month, Period, SheetAudit, StoreResult, WorkbookResult } from '../types'
+import type { AuditItem, DirectoryRow, IndicatorArea, IndicatorValue, Month, Period, SheetAudit, StoreResult, WorkbookResult } from '../types'
 
 type Row = Record<string, unknown>
-type Instruction = { rule: string; multipleMonthLogic: string; ytdLogic: string }
+type Instruction = { areas: IndicatorArea[]; rule: string; multipleMonthLogic: string; ytdLogic: string }
 type IndicatorSheet = { config: IndicatorConfig; actualName: string; rows: Row[]; cecoKey?: string; periodKeys: Partial<Record<Period,string>> }
 type WorkbookSource = {
   fileName: string
@@ -33,6 +33,13 @@ const numeric = (value: unknown): number | null => {
   const text = String(value).trim().replace(/\u00a0/g,'').replace(/[$%]/g,'').replace(/,/g,'.')
   const parsed = Number(text)
   return Number.isFinite(parsed) ? parsed : null
+}
+const parseAreas = (value: unknown): IndicatorArea[] => {
+  const tokens = String(value ?? '').split(',').map(item => normalize(item)).filter(Boolean)
+  const areas: IndicatorArea[] = []
+  if (tokens.includes('ops')) areas.push('Ops')
+  if (tokens.includes('rh')) areas.push('RH')
+  return areas
 }
 const ratio = (value: unknown) => {
   const number = numeric(value)
@@ -94,6 +101,7 @@ function simpleIndicator(config: IndicatorConfig, instruction: Instruction, valu
     sheet: config.sheet,
     indicator: config.indicator,
     pillar: config.pillar,
+    areas: instruction.areas,
     rule: instruction.rule,
     multipleMonthLogic: instruction.multipleMonthLogic,
     ytdLogic: instruction.ytdLogic,
@@ -120,6 +128,7 @@ function aggregateEvaluable(config: IndicatorConfig, instruction: Instruction, v
     sheet: config.sheet,
     indicator: config.indicator,
     pillar: config.pillar,
+    areas: instruction.areas,
     rule: instruction.rule,
     multipleMonthLogic: instruction.multipleMonthLogic,
     ytdLogic: instruction.ytdLogic,
@@ -134,7 +143,7 @@ function aggregateEvaluable(config: IndicatorConfig, instruction: Instruction, v
 
 function buildIndicator(source: WorkbookSource, config: IndicatorConfig, ceco: string, selection: Period[]): IndicatorValue {
   const sheet = source.indicatorSheets.get(config.sheet)
-  const instruction = source.instructions.get(normalize(config.sheet)) ?? { rule:'', multipleMonthLogic:'', ytdLogic:'' }
+  const instruction = source.instructions.get(normalize(config.sheet)) ?? { areas:[], rule:'', multipleMonthLogic:'', ytdLogic:'' }
   if (!sheet?.cecoKey) return simpleIndicator(config, instruction, null)
 
   const isYTD = selection.includes('YTD')
@@ -249,12 +258,14 @@ function parseSource(buffer: ArrayBuffer, fileName: string): WorkbookSource {
   if (!instructionRows.length) throw new Error('La pestaña Instrucciones no contiene registros.')
   const instructionHeaders = {
     sheet: findKey(instructionRows[0], 'Pestaña'),
+    area: findKey(instructionRows[0], 'Area'),
     rule: findKey(instructionRows[0], 'Ponderacion'),
     multiple: findKey(instructionRows[0], 'Logica Selección Mes Multiple'),
     ytd: findKey(instructionRows[0], 'Logica YTD'),
   }
   const missingInstructionHeaders = [
     !instructionHeaders.sheet ? 'Pestaña' : '',
+    !instructionHeaders.area ? 'Area' : '',
     !instructionHeaders.rule ? 'Ponderacion' : '',
     !instructionHeaders.multiple ? 'Logica Selección Mes Multiple' : '',
     !instructionHeaders.ytd ? 'Logica YTD' : '',
@@ -266,15 +277,18 @@ function parseSource(buffer: ArrayBuffer, fileName: string): WorkbookSource {
     const sheet = normalize(row[instructionHeaders.sheet!])
     if (!sheet) return
     instructions.set(sheet, {
+      areas: parseAreas(row[instructionHeaders.area!]),
       rule: String(row[instructionHeaders.rule!] ?? ''),
       multipleMonthLogic: String(row[instructionHeaders.multiple!] ?? ''),
       ytdLogic: String(row[instructionHeaders.ytd!] ?? ''),
     })
   })
   const missingInstructionRows = INDICATORS.filter(config => !instructions.has(normalize(config.sheet))).map(config => config.sheet)
+  const missingInstructionAreas = INDICATORS.filter(config => !(instructions.get(normalize(config.sheet))?.areas.length)).map(config => config.sheet)
   if (missingInstructionRows.length) throw new Error(`Instrucciones no contiene lógica para: ${missingInstructionRows.join(', ')}.`)
+  if (missingInstructionAreas.length) throw new Error(`Instrucciones requiere Area válida (Ops, RH u Ops ,RH) para: ${missingInstructionAreas.join(', ')}.`)
   baseSheetAudits.push({ sheet:instructionsName, found:true, rows:instructionRows.length, headers:Object.keys(instructionRows[0]), missingHeaders:[], validCeCos:0, duplicateCeCos:[] })
-  baseAudit.push({ level:'ok', category:'Instrucciones', message:`Se leyeron Ponderacion, Logica Selección Mes Multiple y Logica YTD para los ${INDICATORS.length} indicadores.` })
+  baseAudit.push({ level:'ok', category:'Instrucciones', message:`Se leyeron Area, Ponderacion, Logica Selección Mes Multiple y Logica YTD para los ${INDICATORS.length} indicadores.` })
 
   const indicatorSheets = new Map<string,IndicatorSheet>()
   INDICATORS.forEach(config => {
