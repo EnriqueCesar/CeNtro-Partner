@@ -12,8 +12,17 @@
     #boot-fallback>div{max-width:620px;background:#fff;border:1px solid #dbe3e8;border-radius:24px;padding:32px;text-align:center}
     #boot-fallback h1{color:#006241;margin:0 0 12px;font-size:28px}#boot-fallback p{line-height:1.6;color:#475569}
   </style>
-  <script type="module" crossorigin src="/CeNtro-Partner/assets/index-Du3vMK3u.js"></script>
-  <link rel="stylesheet" crossorigin href="/CeNtro-Partner/assets/index-CB1L33B2.css">
+  <script>
+    (function(){
+      var key='centro-partner-cache-reset-v2.1';
+      if(localStorage.getItem(key)) return;
+      localStorage.setItem(key,'1');
+      if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(items){return Promise.all(items.map(function(item){return item.unregister()}))}).catch(function(){})}
+      if('caches' in window){caches.keys().then(function(keys){return Promise.all(keys.map(function(name){return caches.delete(name)}))}).catch(function(){})}
+    })();
+  </script>
+  <script type="module" crossorigin src="/CeNtro-Partner/assets/index-DrvbW-_u.js"></script>
+  <link rel="stylesheet" crossorigin href="/CeNtro-Partner/assets/index-CZdtS5t6.css">
 <link rel="manifest" href="/CeNtro-Partner/manifest.webmanifest"></head>
 <body>
   <div id="root">
@@ -22,7 +31,7 @@
   <script>
     window.__CENTRO_BOOT_TIMER__=setTimeout(function(){
       var fallback=document.getElementById('boot-fallback');
-      if(fallback)fallback.innerHTML='<div><h1>No fue posible iniciar</h1><p>El sitio fue publicado sin compilar o algún archivo no está disponible. Vuelve a desplegar mediante GitHub Actions.</p><button onclick="location.reload()" style="border:0;border-radius:12px;background:#006241;color:#fff;padding:12px 18px;font-weight:700;cursor:pointer">Reintentar</button></div>';
+      if(fallback)fallback.innerHTML='<div><h1>No fue posible iniciar</h1><p>Actualiza la página para descargar la versión más reciente.</p><button onclick="location.reload()" style="border:0;border-radius:12px;background:#006241;color:#fff;padding:12px 18px;font-weight:700;cursor:pointer">Reintentar</button></div>';
     },12000);
   </script>
 </body>
