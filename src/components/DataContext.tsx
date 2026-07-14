@@ -19,6 +19,8 @@ type Ctx = {
   setDm: (value: string) => void
   dms: string[]
   visibleIndicatorCount: number
+  showBbBtSs: boolean
+  toggleBbBtSs: () => void
   retry: () => void
 }
 
@@ -39,6 +41,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [selectedPeriods, setSelectedPeriods] = useState<Period[]>(['YTD'])
   const [pillar, setPillar] = useState<Pillar>('Todos')
   const [dm, setDm] = useState('Todos')
+  const [showBbBtSs, setShowBbBtSs] = useState(true)
 
   const load = useCallback(async () => {
     setError('')
@@ -77,21 +80,26 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const filteredByDistrict = (data?.stores ?? []).filter(store => dm === 'Todos' || store.DM === dm)
     return filteredByDistrict
       .map(store => {
-        const indicators = pillar === 'Todos' ? store.indicators : store.indicators.filter(indicator => indicator.pillar === pillar)
+        const pillarIndicators = pillar === 'Todos' ? store.indicators : store.indicators.filter(indicator => indicator.pillar === pillar)
+        const indicators = showBbBtSs ? pillarIndicators : pillarIndicators.filter(indicator => !['BB','BT','SS'].includes(indicator.indicator))
         return { ...store, indicators, ...summarizeIndicators(indicators) }
       })
       .sort((a,b) => b.compliance - a.compliance || b.fulfilled - a.fulfilled || a.CeCo.localeCompare(b.CeCo))
       .map((store,index) => ({ ...store, rank:index + 1 }))
-  }, [data, dm, pillar])
+  }, [data, dm, pillar, showBbBtSs])
 
   const visibleIndicatorCount = useMemo(() => {
-    if (pillar === 'Todos') return data?.indicatorCount ?? 18
-    return data?.stores[0]?.indicators.filter(indicator => indicator.pillar === pillar).length ?? 0
-  }, [data, pillar])
+    const indicators = data?.stores[0]?.indicators ?? []
+    return indicators.filter(indicator =>
+      (pillar === 'Todos' || indicator.pillar === pillar)
+      && (showBbBtSs || !['BB','BT','SS'].includes(indicator.indicator))
+    ).length
+  }, [data, pillar, showBbBtSs])
 
   return <DataContext.Provider value={{
     data, stores, stage, error, selectedPeriods, togglePeriod, selectAllMonths, clearMonths,
-    pillar, setPillar, dm, setDm, dms, visibleIndicatorCount, retry:() => void load(),
+    pillar, setPillar, dm, setDm, dms, visibleIndicatorCount, showBbBtSs,
+    toggleBbBtSs:() => setShowBbBtSs(current => !current), retry:() => void load(),
   }}>{children}</DataContext.Provider>
 }
 
