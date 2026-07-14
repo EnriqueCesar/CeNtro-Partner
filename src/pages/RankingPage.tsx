@@ -70,15 +70,32 @@ function orderIndicators(indicators: IndicatorValue[]) {
 function indicatorsForStore(store: StoreResult) {
   return orderIndicators(store.indicators)
 }
-function complianceHeatmapStyle(value: number, minimum: number, maximum: number): CSSProperties {
-  const position = maximum === minimum ? 0.5 : Math.min(1, Math.max(0, (value - minimum) / (maximum - minimum)))
-  const hue = Math.round(position * 120)
-  const textColor = position >= 0.66 ? '#075b3a' : position <= 0.33 ? '#8a1c13' : '#665200'
+type ComplianceQuartiles = { q1:number; q2:number; q3:number }
+
+function quantile(sortedValues: number[], percentile: number) {
+  if (!sortedValues.length) return 0
+  const position = (sortedValues.length - 1) * percentile
+  const lower = Math.floor(position)
+  const upper = Math.ceil(position)
+  if (lower === upper) return sortedValues[lower]
+  const weight = position - lower
+  return sortedValues[lower] * (1 - weight) + sortedValues[upper] * weight
+}
+
+function complianceQuartiles(values: number[]): ComplianceQuartiles {
+  const sortedValues = [...values].sort((a,b) => a - b)
   return {
-    backgroundColor:`hsl(${hue} 72% 88%)`,
-    color:textColor,
-    boxShadow:`inset 0 0 0 1px hsl(${hue} 55% 72%)`,
+    q1:quantile(sortedValues, 0.25),
+    q2:quantile(sortedValues, 0.50),
+    q3:quantile(sortedValues, 0.75),
   }
+}
+
+function complianceQuartileStyle(value: number, quartiles: ComplianceQuartiles): CSSProperties {
+  if (value >= quartiles.q3) return { backgroundColor:'#dff3e8', color:'#075b3a', boxShadow:'inset 0 0 0 1px #9fd3b8' }
+  if (value >= quartiles.q2) return { backgroundColor:'#fff3bf', color:'#6b5700', boxShadow:'inset 0 0 0 1px #e9cf63' }
+  if (value >= quartiles.q1) return { backgroundColor:'#ffe0b2', color:'#8a4300', boxShadow:'inset 0 0 0 1px #e9a85c' }
+  return { backgroundColor:'#f9d6d5', color:'#8a1c13', boxShadow:'inset 0 0 0 1px #e39b96' }
 }
 
 export function RankingPage() {
@@ -94,11 +111,10 @@ export function RankingPage() {
     return sortDirection === 'desc' ? b.rank - a.rank : a.rank - b.rank
   }), [stores, sortColumn, sortDirection])
 
-  const complianceRange = useMemo(() => {
-    if (!sortedStores.length) return { minimum:0, maximum:0 }
-    const values = sortedStores.map(store => store.compliance)
-    return { minimum:Math.min(...values), maximum:Math.max(...values) }
-  }, [sortedStores])
+  const quartiles = useMemo(
+    () => complianceQuartiles(stores.map(store => store.compliance)),
+    [stores],
+  )
 
   if (stage !== 'ready' && stage !== 'error' && !data) return <LoadingPanel stage={stage} />
   if (stage === 'error') return <RecoveryPanel message={error} onRetry={retry} />
@@ -257,8 +273,8 @@ export function RankingPage() {
               return <td key={current.indicator} className={stateClass(current)}>{formatValue(current)}</td>
             })}<td
               className="compliance-cell"
-              style={complianceHeatmapStyle(store.compliance, complianceRange.minimum, complianceRange.maximum)}
-              title={`Escala visible: ${(complianceRange.minimum * 100).toFixed(1)}%–${(complianceRange.maximum * 100).toFixed(1)}%`}
+              style={complianceQuartileStyle(store.compliance, quartiles)}
+              title={`Cuartiles visibles: Q1 ${(quartiles.q1 * 100).toFixed(1)}% · Q2 ${(quartiles.q2 * 100).toFixed(1)}% · Q3 ${(quartiles.q3 * 100).toFixed(1)}%`}
             ><span className="font-extrabold">{(store.compliance * 100).toFixed(1)}%</span></td></tr>
         })}</tbody>
       </table></div>
