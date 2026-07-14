@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type CSSProperties } from 'react'
 import * as XLSX from 'xlsx'
 import { ArrowDown, ArrowUp, Building2, Check, ChevronDown, CircleGauge, Download, Eye, EyeOff, ListChecks, Trophy } from 'lucide-react'
 import { LoadingPanel } from '../components/LoadingPanel'
@@ -69,6 +69,16 @@ function orderIndicators(indicators: IndicatorValue[]) {
 function indicatorsForStore(store: StoreResult) {
   return orderIndicators(store.indicators)
 }
+function complianceHeatmapStyle(value: number, minimum: number, maximum: number): CSSProperties {
+  const position = maximum === minimum ? 0.5 : Math.min(1, Math.max(0, (value - minimum) / (maximum - minimum)))
+  const hue = Math.round(position * 120)
+  const textColor = position >= 0.66 ? '#075b3a' : position <= 0.33 ? '#8a1c13' : '#665200'
+  return {
+    backgroundColor:`hsl(${hue} 72% 88%)`,
+    color:textColor,
+    boxShadow:`inset 0 0 0 1px hsl(${hue} 55% 72%)`,
+  }
+}
 
 export function RankingPage() {
   const { data, stores, stage, error, retry, selectedPeriods, togglePeriod, selectAllMonths, clearMonths, pillar, setPillar, dm, setDm, dms, visibleIndicatorCount, showBbBtSs, toggleBbBtSs } = useData()
@@ -82,6 +92,12 @@ export function RankingPage() {
     }
     return sortDirection === 'desc' ? b.rank - a.rank : a.rank - b.rank
   }), [stores, sortColumn, sortDirection])
+
+  const complianceRange = useMemo(() => {
+    if (!sortedStores.length) return { minimum:0, maximum:0 }
+    const values = sortedStores.map(store => store.compliance)
+    return { minimum:Math.min(...values), maximum:Math.max(...values) }
+  }, [sortedStores])
 
   if (stage !== 'ready' && stage !== 'error' && !data) return <LoadingPanel stage={stage} />
   if (stage === 'error') return <RecoveryPanel message={error} onRetry={retry} />
@@ -239,7 +255,11 @@ export function RankingPage() {
             {displayedIndicators.map(indicator => {
               const current = indicatorMap.get(indicator.indicator) ?? indicator
               return <td key={current.indicator} className={stateClass(current)}>{formatValue(current)}</td>
-            })}<td className="compliance-cell"><span className="compliance-badge">{(store.compliance * 100).toFixed(1)}%</span></td></tr>
+            })}<td
+              className="compliance-cell"
+              style={complianceHeatmapStyle(store.compliance, complianceRange.minimum, complianceRange.maximum)}
+              title={`Escala visible: ${(complianceRange.minimum * 100).toFixed(1)}%–${(complianceRange.maximum * 100).toFixed(1)}%`}
+            ><span className="font-extrabold">{(store.compliance * 100).toFixed(1)}%</span></td></tr>
         })}</tbody>
       </table></div>
     </section>
