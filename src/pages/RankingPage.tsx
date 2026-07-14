@@ -1,16 +1,15 @@
 import { useMemo, useState } from 'react'
 import * as XLSX from 'xlsx'
-import { ArrowDown, ArrowUp, Building2, Check, ChevronDown, CircleGauge, Download, ListChecks, Trophy } from 'lucide-react'
+import { ArrowDown, ArrowUp, Building2, Check, ChevronDown, CircleGauge, Download, Eye, EyeOff, ListChecks, Trophy } from 'lucide-react'
 import { LoadingPanel } from '../components/LoadingPanel'
 import { RecoveryPanel } from '../components/RecoveryPanel'
 import { StatCard } from '../components/StatCard'
 import { useData } from '../components/DataContext'
 import type { IndicatorValue, Month, Period, Pillar, StoreResult } from '../types'
 
-const groupCounts = { Partner:8, Cliente:5, Negocio:6 } as const
 const months: Month[] = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
 const pillars: Pillar[] = ['Todos','Partner','Cliente','Negocio']
-const percentIndicators = new Set(['Rotacion','Desempeño','Conexion','Bebida','SR%','VMT%','ppto%','AT%','COGS'])
+const percentIndicators = new Set(['Rotacion','Estabilidad 12M','Estabilidad 24M','Desempeño','Conexion','Bebida','SR%','VMT%','ppto%','AT%','COGS'])
 const clientIndicatorOrder = ['NPS','Conexion','Desempeño','Bebida','SR%']
 const visibleIndicatorNames: Record<string,string> = {
   'Estabilidad 12M':'E-12M',
@@ -28,7 +27,13 @@ function formatValue(item: IndicatorValue) {
   if (typeof item.value === 'number') {
     if (percentIndicators.has(item.indicator)) {
       const ratio = Math.abs(item.value) > 1.5 ? item.value / 100 : item.value
-      return `${(ratio * 100).toFixed(1)}%`
+      const decimals = item.indicator === 'Estabilidad 12M' || item.indicator === 'Estabilidad 24M' ? 0 : 1
+      return `${(ratio * 100).toFixed(decimals)}%`
+    }
+    if (item.indicator === 'OMT') return new Intl.NumberFormat('es-MX', { maximumFractionDigits:0 }).format(Math.round(item.value))
+    if (item.indicator === 'Segundas Cx') {
+      const truncated = Math.trunc(item.value * 10) / 10
+      return new Intl.NumberFormat('es-MX', { minimumFractionDigits:1, maximumFractionDigits:1 }).format(truncated)
     }
     return new Intl.NumberFormat('es-MX', { maximumFractionDigits:2 }).format(item.value)
   }
@@ -66,7 +71,7 @@ function indicatorsForStore(store: StoreResult) {
 }
 
 export function RankingPage() {
-  const { data, stores, stage, error, retry, selectedPeriods, togglePeriod, selectAllMonths, clearMonths, pillar, setPillar, dm, setDm, dms, visibleIndicatorCount } = useData()
+  const { data, stores, stage, error, retry, selectedPeriods, togglePeriod, selectAllMonths, clearMonths, pillar, setPillar, dm, setDm, dms, visibleIndicatorCount, showBbBtSs, toggleBbBtSs } = useData()
   const [sortColumn, setSortColumn] = useState<SortColumn>('rank')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
 
@@ -209,6 +214,10 @@ export function RankingPage() {
       <div className="section-heading border-b border-slate-200 px-5 py-4">
         <div><p className="eyebrow">Clasificación dinámica</p><h2 className="section-title">Ranking Regional</h2></div>
         <div className="flex items-center gap-2">
+          <button type="button" onClick={toggleBbBtSs} className="inline-flex items-center gap-2 rounded-lg border border-starbucks/20 px-3 py-2 text-xs font-bold text-starbucks hover:bg-starbucks-light">
+            {showBbBtSs ? <EyeOff size={15} /> : <Eye size={15} />}
+            {showBbBtSs ? 'Ocultar BB / BT / SS' : 'Mostrar BB / BT / SS'}
+          </button>
           <button type="button" onClick={exportRanking} className="inline-flex items-center gap-2 rounded-lg border border-starbucks/20 px-3 py-2 text-xs font-bold text-starbucks hover:bg-starbucks-light"><Download size={15} />Exportar Excel</button>
           <span className="summary-chip">{stores.length} tiendas</span>
         </div>
@@ -219,7 +228,10 @@ export function RankingPage() {
             Ranking Región {sortColumn === 'rank' && sortDirection === 'desc' ? <ArrowDown size={14} /> : <ArrowUp size={14} />}
           </button>
         </th>
-          {activeGroups.map(group => <th key={group} colSpan={groupCounts[group]} className={`group-${group.toLowerCase()}`}>{group}</th>)}<th colSpan={1} className="group-gestion">Gestión</th></tr>
+          {activeGroups.map(group => {
+            const count = displayedIndicators.filter(indicator => indicator.pillar === group).length
+            return count ? <th key={group} colSpan={count} className={`group-${group.toLowerCase()}`}>{group}</th> : null
+          })}<th colSpan={1} className="group-gestion">Gestión</th></tr>
           <tr>{displayedIndicators.map(indicator => <th key={indicator.indicator}>{visibleIndicatorName(indicator.indicator)}</th>)}<th><button type="button" onClick={toggleComplianceSort} className="inline-flex items-center gap-1.5" title={sortColumn === 'compliance' && sortDirection === 'desc' ? 'Ordenar de menor a mayor' : 'Ordenar de mayor a menor'}>Cumplimiento {sortColumn === 'compliance' && sortDirection === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />}</button></th></tr></thead>
         <tbody>{sortedStores.map(store => {
           const indicatorMap = new Map(store.indicators.map(indicator => [indicator.indicator, indicator]))
