@@ -1,6 +1,6 @@
 import { useMemo, useState, type CSSProperties } from 'react'
 import * as XLSX from 'xlsx'
-import { ArrowDown, ArrowUp, Building2, Check, ChevronDown, CircleGauge, Download, ListChecks, MonitorUp, Trophy, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, Building2, Check, ChevronDown, CircleGauge, Download, EyeOff, ListChecks, MonitorUp, Trophy, X } from 'lucide-react'
 import { LoadingPanel } from '../components/LoadingPanel'
 import { RecoveryPanel } from '../components/RecoveryPanel'
 import { StatCard } from '../components/StatCard'
@@ -114,8 +114,27 @@ export function RankingPage() {
   const [sortColumn, setSortColumn] = useState<SortColumn>('rank')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [presentationMode, setPresentationMode] = useState(false)
+  const [hideIncomplete, setHideIncomplete] = useState(false)
 
-  const sortedStores = useMemo(() => [...stores].sort((a,b) => {
+  const displayedIndicators = useMemo(() => orderIndicators(
+    stores[0]?.indicators
+      ?? data?.stores[0]?.indicators.filter(indicator => pillar === 'Todos' || indicator.pillar === pillar)
+      ?? [],
+  ), [stores, data, pillar])
+
+  const visibleStores = useMemo(() => {
+    if (!hideIncomplete) return stores
+    const visibleNames = new Set(displayedIndicators.map(indicator => indicator.indicator))
+    return stores.filter(store => {
+      const blankCount = store.indicators.reduce((count, indicator) => {
+        if (!visibleNames.has(indicator.indicator)) return count
+        return indicator.status === 'blank' ? count + 1 : count
+      }, 0)
+      return blankCount <= 5
+    })
+  }, [stores, displayedIndicators, hideIncomplete])
+
+  const sortedStores = useMemo(() => [...visibleStores].sort((a,b) => {
     if (sortColumn === 'compliance') {
       const difference = sortDirection === 'desc' ? b.compliance - a.compliance : a.compliance - b.compliance
       return difference || a.rank - b.rank
@@ -134,11 +153,11 @@ export function RankingPage() {
       return difference || a.rank - b.rank
     }
     return sortDirection === 'desc' ? b.rank - a.rank : a.rank - b.rank
-  }), [stores, sortColumn, sortDirection])
+  }), [visibleStores, sortColumn, sortDirection])
 
   const quartiles = useMemo(
-    () => complianceQuartiles(stores.map(store => store.compliance)),
-    [stores],
+    () => complianceQuartiles(visibleStores.map(store => store.compliance)),
+    [visibleStores],
   )
 
   if (stage !== 'ready' && stage !== 'error' && !data) return <LoadingPanel stage={stage} />
@@ -148,12 +167,6 @@ export function RankingPage() {
   const best = stores[0]
   const activeGroups = pillar === 'Todos' ? (['Partner','Cliente','Negocio'] as const) : ([pillar] as const)
   const title = selectionLabel(selectedPeriods)
-  const displayedIndicators = orderIndicators(
-    stores[0]?.indicators
-      ?? data?.stores[0]?.indicators.filter(indicator => pillar === 'Todos' || indicator.pillar === pillar)
-      ?? [],
-  )
-
   function toggleIndicatorSort(indicator: SortColumn) {
     setSortDirection(current => sortColumn === indicator ? (current === 'asc' ? 'desc' : 'asc') : 'asc')
     setSortColumn(indicator)
@@ -276,8 +289,9 @@ export function RankingPage() {
         <div><p className="eyebrow">Clasificación dinámica</p><h2 className="section-title">Ranking Regional</h2></div>
         <div className="flex items-center gap-2">
           {presentationMode ? <button type="button" onClick={() => setPresentationMode(false)} className="presentation-exit-button"><X size={15} />Salir de presentación</button> : <button type="button" onClick={() => setPresentationMode(true)} className="presentation-button"><MonitorUp size={15} />Modo Presentación</button>}
+          <button type="button" onClick={() => setHideIncomplete(current => !current)} className={`incomplete-toggle ${hideIncomplete ? 'is-active' : ''}`} aria-pressed={hideIncomplete} title="Oculta tiendas con más de 5 indicadores visibles en blanco"><EyeOff size={15} />Ocultar incompletas</button>
           <button type="button" onClick={exportRanking} className="secondary-ranking-control inline-flex items-center gap-2 rounded-lg border border-starbucks/20 px-3 py-2 text-xs font-bold text-starbucks hover:bg-starbucks-light"><Download size={15} />Exportar Excel</button>
-          <span className="secondary-ranking-control summary-chip">{stores.length} tiendas</span>
+          <span className="secondary-ranking-control summary-chip">{visibleStores.length} tiendas</span>
         </div>
       </div>
       <div className="ranking-scroll"><table className="ranking-table">
@@ -291,7 +305,7 @@ export function RankingPage() {
             const active = sortColumn === indicator.indicator
             return <th key={indicator.indicator} className={`indicator-header ${sortable ? 'is-sortable' : ''}`}>
               {sortable ? <button type="button" onClick={() => toggleIndicatorSort(indicator.indicator as SortColumn)} className="indicator-sort-button" title={active && sortDirection === 'asc' ? 'Ordenar de mayor a menor' : 'Ordenar de menor a mayor'}>
-                <span>{visibleIndicatorName(indicator.indicator)}</span>{active && (sortDirection === 'asc' ? <ArrowUp size={13} /> : <ArrowDown size={13} />)}
+                <span className="indicator-sort-label">{visibleIndicatorName(indicator.indicator)}</span><span className="indicator-sort-icon" aria-hidden="true">{active && (sortDirection === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</span>
               </button> : <span>{visibleIndicatorName(indicator.indicator)}</span>}
             </th>
           })}<th className="compliance-header"><button type="button" onClick={toggleComplianceSort} className="inline-flex items-center gap-1.5" title={sortColumn === 'compliance' && sortDirection === 'desc' ? 'Ordenar de menor a mayor' : 'Ordenar de mayor a menor'}>Cumplimiento {sortColumn === 'compliance' && sortDirection === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />}</button></th></tr></thead>
