@@ -25,19 +25,17 @@ body{margin:0;min-width:320px}
 .ranking-table tbody tr:hover td{background:#f8fafc}
 .ranking-table .sticky-col{position:sticky;left:0;z-index:3;text-align:left}
 .ranking-table thead .sticky-col{z-index:5}
-.store-col{min-width:220px!important;max-width:260px;white-space:normal!important}
-.rank-col{min-width:96px!important}
+.store-col{min-width:260px!important;max-width:310px;white-space:normal!important}
 .group-row th{color:#fff;border-bottom:0}
-.group-row .store-col,.group-row .rank-col{background:#004c34}
+.group-row .store-col{background:#004c34}
 .group-partner{background:#006241!important}.group-cliente{background:#18794e!important}.group-negocio{background:#2f6b56!important}.group-gestion{background:#004c34!important}
-.rank-badge{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:999px;background:#006241;color:#fff;font-weight:800}
 .indicator-cell{color:#94a3b8}
 .indicator-cell.is-ok{background:#e8f5ee!important;color:#087443;font-weight:800}
 .indicator-cell.is-bad{background:#fdecec!important;color:#b42318;font-weight:800}
 .indicator-cell.is-na{background:#eef2f6!important;color:#64748b;font-weight:800}
 .compliance-cell{background:#f0f8f4!important;min-width:112px!important}
 .compliance-badge{display:inline-flex;border-radius:999px;background:#006241;color:#fff;padding:.4rem .65rem;font-weight:800}
-@media(max-width:640px){.card{@apply rounded-xl}.store-col{min-width:170px!important;max-width:190px}.ranking-table th,.ranking-table td{padding:.55rem .5rem}}
+@media(max-width:640px){.card{@apply rounded-xl}.store-col{min-width:220px!important;max-width:250px}.ranking-table th,.ranking-table td{padding:.55rem .5rem}}
 
 /* Compact ranking layout: vertical indicator headers only. */
 .ranking-table .indicator-header{
@@ -71,17 +69,19 @@ body{margin:0;min-width:320px}
   max-width:110px;
   text-align:center;
 }
-.ranking-table .rank-col{
-  width:88px;
-  min-width:88px!important;
-  max-width:88px;
-  text-align:center;
-}
 .ranking-table .store-col{
-  width:220px;
-  min-width:220px!important;
-  max-width:240px;
+  width:280px;
+  min-width:280px!important;
+  max-width:310px;
 }
+.ranking-table .store-header{font-size:.78rem;letter-spacing:.055em}
+.ranking-table td.store-col{vertical-align:middle;line-height:1.25}
+.store-position{display:inline-grid;place-items:center;margin-right:.65rem;vertical-align:middle;min-width:28px;height:28px;border-radius:999px;background:#e7f3ed;color:#006241;font-size:.75rem;font-weight:900}
+.store-name{vertical-align:middle;overflow-wrap:anywhere}
+.indicator-sort-button{display:inline-flex;height:100%;align-items:flex-end;justify-content:center;gap:.3rem;color:inherit;font:inherit;text-transform:inherit;letter-spacing:inherit;cursor:pointer}
+.indicator-sort-button span{font-size:.74rem;font-weight:900}
+.indicator-sort-button svg{flex:0 0 auto;margin-bottom:.05rem}
+.ranking-table .indicator-header.is-sortable{background:#f1f5f3}
 .group-row th{
   text-align:center;
   vertical-align:middle;
@@ -102,11 +102,6 @@ body{margin:0;min-width:320px}
     width:42px;
     min-width:42px;
     max-width:42px;
-  }
-  .ranking-table .rank-col{
-    width:78px;
-    min-width:78px!important;
-    max-width:78px;
   }
 }
 
