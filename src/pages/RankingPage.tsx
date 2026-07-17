@@ -110,7 +110,7 @@ function complianceQuartileStyle(value: number, quartiles: ComplianceQuartiles):
 }
 
 export function RankingPage() {
-  const { data, stores, stage, error, retry, selectedPeriods, togglePeriod, selectAllMonths, clearMonths, pillar, setPillar, dm, setDm, dms, visibleIndicatorCount, area, setArea } = useData()
+  const { data, stores, stage, error, retry, selectedPeriods, togglePeriod, selectAllMonths, clearMonths, pillar, setPillar, region, setRegion, regions, dm, setDm, dms, visibleIndicatorCount, area, setArea } = useData()
   const [sortColumn, setSortColumn] = useState<SortColumn>('rank')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [presentationMode, setPresentationMode] = useState(false)
@@ -219,7 +219,7 @@ export function RankingPage() {
     <section className="ranking-filters card mb-5 py-4">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div className="min-w-48"><p className="eyebrow">Vista ejecutiva</p><h2 className="section-title">Resultados {title}</h2></div>
-        <div className="grid w-full gap-3 sm:grid-cols-2 xl:max-w-5xl xl:grid-cols-4">
+        <div className="grid w-full gap-3 sm:grid-cols-2 xl:max-w-6xl xl:grid-cols-5">
           <div className="filter-label">Mes
             <details className="month-picker group relative mt-1">
               <summary className="control flex cursor-pointer list-none items-center justify-between normal-case tracking-normal">
@@ -250,6 +250,9 @@ export function RankingPage() {
           </label>
           <label className="filter-label">Área
             <select value={area} onChange={event => setArea(event.target.value as Area)} className="control">{areas.map(value => <option key={value}>{value}</option>)}</select>
+          </label>
+          <label className="filter-label">Región
+            <select value={region} onChange={event => setRegion(event.target.value)} className="control"><option>Todas</option>{regions.map(value => <option key={value}>{value}</option>)}</select>
           </label>
           <label className="filter-label">Distrito
             <select value={dm} onChange={event => setDm(event.target.value)} className="control"><option>Todos</option>{dms.map(value => <option key={value}>{value}</option>)}</select>

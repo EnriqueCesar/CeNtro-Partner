@@ -15,6 +15,9 @@ type Ctx = {
   clearMonths: () => void
   pillar: Pillar
   setPillar: (value: Pillar) => void
+  region: string
+  setRegion: (value: string) => void
+  regions: string[]
   dm: string
   setDm: (value: string) => void
   dms: string[]
@@ -40,6 +43,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState('')
   const [selectedPeriods, setSelectedPeriods] = useState<Period[]>(['YTD'])
   const [pillar, setPillar] = useState<Pillar>('Todos')
+  const [region, setRegion] = useState('Todas')
   const [dm, setDm] = useState('Todos')
   const [area, setArea] = useState<Area>('Todos')
 
@@ -71,14 +75,29 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const selectAllMonths = useCallback(() => setSelectedPeriods([...ALL_MONTHS]), [])
   const clearMonths = useCallback(() => setSelectedPeriods([]), [])
 
-  const dms = useMemo(
-    () => Array.from(new Set((data?.stores ?? []).map(store => store.DM).filter(Boolean))).sort((a,b) => a.localeCompare(b,'es')),
+  const regions = useMemo(
+    () => Array.from(new Set((data?.stores ?? []).map(store => store.Región).filter(Boolean))).sort((a,b) => a.localeCompare(b,'es')),
     [data],
   )
 
+  const dms = useMemo(
+    () => Array.from(new Set((data?.stores ?? [])
+      .filter(store => region === 'Todas' || store.Región === region)
+      .map(store => store.DM)
+      .filter(Boolean))).sort((a,b) => a.localeCompare(b,'es')),
+    [data, region],
+  )
+
+  useEffect(() => {
+    if (dm !== 'Todos' && !dms.includes(dm)) setDm('Todos')
+  }, [dm, dms])
+
   const stores = useMemo(() => {
-    const filteredByDistrict = (data?.stores ?? []).filter(store => dm === 'Todos' || store.DM === dm)
-    return filteredByDistrict
+    const filteredByDirectory = (data?.stores ?? []).filter(store =>
+      (region === 'Todas' || store.Región === region)
+      && (dm === 'Todos' || store.DM === dm)
+    )
+    return filteredByDirectory
       .map(store => {
         const pillarIndicators = pillar === 'Todos' ? store.indicators : store.indicators.filter(indicator => indicator.pillar === pillar)
         const indicators = area === 'Todos' ? pillarIndicators : pillarIndicators.filter(indicator => indicator.areas.includes(area))
@@ -86,7 +105,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       })
       .sort((a,b) => b.compliance - a.compliance || b.fulfilled - a.fulfilled || a.CeCo.localeCompare(b.CeCo))
       .map((store,index) => ({ ...store, rank:index + 1 }))
-  }, [data, dm, pillar, area])
+  }, [data, region, dm, pillar, area])
 
   const visibleIndicatorCount = useMemo(() => {
     const indicators = data?.stores[0]?.indicators ?? []
@@ -98,7 +117,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   return <DataContext.Provider value={{
     data, stores, stage, error, selectedPeriods, togglePeriod, selectAllMonths, clearMonths,
-    pillar, setPillar, dm, setDm, dms, area, setArea, visibleIndicatorCount,
+    pillar, setPillar, region, setRegion, regions, dm, setDm, dms, area, setArea, visibleIndicatorCount,
     retry:() => void load(),
   }}>{children}</DataContext.Provider>
 }

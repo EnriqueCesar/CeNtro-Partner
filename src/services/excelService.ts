@@ -237,8 +237,9 @@ function parseSource(buffer: ArrayBuffer, fileName: string): WorkbookSource {
   if (!directoryRows.length) throw new Error('La pestaña Directorio no contiene registros.')
   const cecoKey = findKey(directoryRows[0], 'CeCo')
   const storeKey = findKey(directoryRows[0], 'Tienda')
+  const regionKey = findKey(directoryRows[0], 'Región')
   const dmKey = findKey(directoryRows[0], 'DM')
-  const missingDirectoryHeaders = [['CeCo',cecoKey],['Tienda',storeKey],['DM',dmKey]].filter(([,key]) => !key).map(([header]) => header as string)
+  const missingDirectoryHeaders = [['CeCo',cecoKey],['Tienda',storeKey],['Región',regionKey],['DM',dmKey]].filter(([,key]) => !key).map(([header]) => header as string)
   if (missingDirectoryHeaders.length) throw new Error(`Directorio requiere encabezados: ${missingDirectoryHeaders.join(', ')}.`)
 
   const seen = new Set<string>()
@@ -249,7 +250,12 @@ function parseSource(buffer: ArrayBuffer, fileName: string): WorkbookSource {
     if (!/^\d{5}$/.test(CeCo)) return
     if (seen.has(CeCo)) { duplicateDirectoryCeCos.push(CeCo); return }
     seen.add(CeCo)
-    directory.push({ CeCo, Tienda:String(row[storeKey!] ?? '').trim(), DM:String(row[dmKey!] ?? '').trim() })
+    directory.push({
+      CeCo,
+      Tienda:String(row[storeKey!] ?? '').trim(),
+      Región:String(row[regionKey!] ?? '').trim(),
+      DM:String(row[dmKey!] ?? '').trim(),
+    })
   })
   baseSheetAudits.push({ sheet:directoryName, found:true, rows:directoryRows.length, headers:Object.keys(directoryRows[0]), missingHeaders:[], validCeCos:directory.length, duplicateCeCos:duplicateDirectoryCeCos })
 
@@ -302,6 +308,7 @@ function parseSource(buffer: ArrayBuffer, fileName: string): WorkbookSource {
     baseSheetAudits.push({ sheet:actualName, found:true, rows:rows.length, headers:rows[0] ? Object.keys(rows[0]) : [], missingHeaders:[], validCeCos:new Set(rows.map(row => cleanCeCo(row[ceco])).filter(Boolean)).size, duplicateCeCos:[] })
   })
   baseAudit.push({ level:'ok', category:'Estructura', message:`${directory.length} tiendas y ${INDICATORS.length} indicadores cargados por pestaña y encabezado.` })
+  baseAudit.push({ level:'ok', category:'Directorio', message:`Tienda, Región y DM relacionados exclusivamente por CeCo para ${directory.length} tiendas únicas.` })
 
   return { fileName, directory, duplicateDirectoryCeCos, foundSheets, missingSheets, instructions, indicatorSheets, baseAudit, baseSheetAudits }
 }
