@@ -15,6 +15,7 @@ export interface IndicatorValue {
   ytdLogic: string
   value: unknown
   displayValue?: string
+  detailValue?: string
   score: number | null
   fulfilled: number
   applicable: number

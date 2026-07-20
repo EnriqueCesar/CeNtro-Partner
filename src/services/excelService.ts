@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx'
-import { INDICATORS, PERIODS, REQUIRED_SHEETS, normalize, type IndicatorConfig } from '../config/indicators'
+import { EFFECTIVENESS_SHEETS, INDICATORS, PERIODS, REQUIRED_SHEETS, normalize, type IndicatorConfig } from '../config/indicators'
 import type { AuditItem, DirectoryRow, IndicatorArea, IndicatorValue, Month, Period, SheetAudit, StoreResult, WorkbookResult } from '../types'
 
 type Row = Record<string, unknown>
@@ -45,6 +45,23 @@ const ratio = (value: unknown) => {
   const number = numeric(value)
   if (number === null) return null
   return Math.abs(number) > 1.5 ? number / 100 : number
+}
+
+type CourseRatio = { completed:number; possible:number }
+const courseRatio = (value: unknown): CourseRatio | null => {
+  if (isBlank(value) || isExplicitNA(value)) return null
+  const text = String(value).trim().replace(/\u00a0/g,'')
+  const fraction = text.match(/^(\d+(?:[.,]\d+)?)\s*\/\s*(\d+(?:[.,]\d+)?)$/)
+  if (fraction) {
+    const completed = Number(fraction[1].replace(',','.'))
+    const possible = Number(fraction[2].replace(',','.'))
+    return Number.isFinite(completed) && Number.isFinite(possible) && possible > 0
+      ? { completed:Math.min(Math.max(completed, 0), possible), possible }
+      : null
+  }
+  const completed = numeric(value)
+  if (completed === null || completed < 0 || completed > 1) return null
+  return { completed, possible:1 }
 }
 
 function evaluate(config: IndicatorConfig, value: unknown): number | null {
@@ -141,7 +158,58 @@ function aggregateEvaluable(config: IndicatorConfig, instruction: Instruction, v
   }
 }
 
+function buildEffectiveness(source: WorkbookSource, config: IndicatorConfig, ceco: string, selection: Period[]): IndicatorValue {
+  const months = selectedMonths(selection)
+  const details: string[] = []
+  let completed = 0
+  let possible = 0
+  const areas = new Set<IndicatorArea>()
+  const rules: string[] = []
+  const multipleMonthLogic: string[] = []
+  const ytdLogic: string[] = []
+
+  EFFECTIVENESS_SHEETS.forEach(sheetName => {
+    const sheet = source.indicatorSheets.get(sheetName)
+    const instruction = source.instructions.get(normalize(sheetName))
+    instruction?.areas.forEach(area => areas.add(area))
+    if (instruction?.rule) rules.push(`${sheetName}: ${instruction.rule}`)
+    if (instruction?.multipleMonthLogic) multipleMonthLogic.push(`${sheetName}: ${instruction.multipleMonthLogic}`)
+    if (instruction?.ytdLogic) ytdLogic.push(`${sheetName}: ${instruction.ytdLogic}`)
+
+    let sheetCompleted = 0
+    let sheetPossible = 0
+    if (sheet?.cecoKey) {
+      const values = valuesForStore(sheet, ceco, months)
+      months.forEach(month => {
+        const parsed = courseRatio(values.get(month))
+        if (!parsed) return
+        sheetCompleted += parsed.completed
+        sheetPossible += parsed.possible
+      })
+    }
+    completed += sheetCompleted
+    possible += sheetPossible
+    details.push(`${sheetName} ${sheetPossible ? `${sheetCompleted}/${sheetPossible}` : 'N/A'}`)
+  })
+
+  if (!possible) return {
+    sheet:'BB, BT, SS', indicator:'Efectividad', pillar:config.pillar, areas:[...areas],
+    rule:rules.join(' · '), multipleMonthLogic:multipleMonthLogic.join(' · '), ytdLogic:ytdLogic.join(' · '),
+    value:null, displayValue:'N/A', detailValue:`${details.join(' · ')} · Total: N/A`, score:null,
+    fulfilled:0, applicable:0, status:'na',
+  }
+  const score = completed / possible
+  return {
+    sheet:'BB, BT, SS', indicator:'Efectividad', pillar:config.pillar, areas:[...areas],
+    rule:rules.join(' · '), multipleMonthLogic:multipleMonthLogic.join(' · '), ytdLogic:ytdLogic.join(' · '),
+    value:score, displayValue:`${Math.round(score * 100)}%`,
+    detailValue:`${details.join(' · ')} · Total: ${completed}/${possible}`,
+    score, fulfilled:score, applicable:1, status:score === 1 ? 'cumple' : 'no-cumple',
+  }
+}
+
 function buildIndicator(source: WorkbookSource, config: IndicatorConfig, ceco: string, selection: Period[]): IndicatorValue {
+  if (config.indicator === 'Efectividad') return buildEffectiveness(source, config, ceco, selection)
   const sheet = source.indicatorSheets.get(config.sheet)
   const instruction = source.instructions.get(normalize(config.sheet)) ?? { areas:[], rule:'', multipleMonthLogic:'', ytdLogic:'' }
   if (!sheet?.cecoKey) return simpleIndicator(config, instruction, null)
@@ -179,10 +247,6 @@ function buildIndicator(source: WorkbookSource, config: IndicatorConfig, ceco: s
 
   if (logic.includes('suma los valores') || logic.includes('contar aquellos datos 1 o 0')) {
     const result = aggregateEvaluable(config, instruction, months.map(month => monthValues.get(month)))
-    if (normalize(config.indicator) === normalize('Bajas') && result.applicable > 0) {
-      const total = validMonthEntries.reduce((sum,[,value]) => sum + (numeric(value) ?? 0), 0)
-      return { ...result, value:total, displayValue:String(total) }
-    }
     return result
   }
 
@@ -289,15 +353,20 @@ function parseSource(buffer: ArrayBuffer, fileName: string): WorkbookSource {
       ytdLogic: String(row[instructionHeaders.ytd!] ?? ''),
     })
   })
-  const missingInstructionRows = INDICATORS.filter(config => !instructions.has(normalize(config.sheet))).map(config => config.sheet)
-  const missingInstructionAreas = INDICATORS.filter(config => !(instructions.get(normalize(config.sheet))?.areas.length)).map(config => config.sheet)
+  const instructionSheets = [...new Set([...INDICATORS.map(config => config.sheet), ...EFFECTIVENESS_SHEETS])]
+  const missingInstructionRows = instructionSheets.filter(sheet => !instructions.has(normalize(sheet)))
+  const missingInstructionAreas = instructionSheets.filter(sheet => !(instructions.get(normalize(sheet))?.areas.length))
   if (missingInstructionRows.length) throw new Error(`Instrucciones no contiene lógica para: ${missingInstructionRows.join(', ')}.`)
   if (missingInstructionAreas.length) throw new Error(`Instrucciones requiere Area válida (Ops, RH u Ops ,RH) para: ${missingInstructionAreas.join(', ')}.`)
   baseSheetAudits.push({ sheet:instructionsName, found:true, rows:instructionRows.length, headers:Object.keys(instructionRows[0]), missingHeaders:[], validCeCos:0, duplicateCeCos:[] })
   baseAudit.push({ level:'ok', category:'Instrucciones', message:`Se leyeron Area, Ponderacion, Logica Selección Mes Multiple y Logica YTD para los ${INDICATORS.length} indicadores.` })
 
   const indicatorSheets = new Map<string,IndicatorSheet>()
-  INDICATORS.forEach(config => {
+  const sourceConfigs = new Map(INDICATORS.map(config => [config.sheet, config]))
+  EFFECTIVENESS_SHEETS.forEach(sheet => {
+    if (!sourceConfigs.has(sheet)) sourceConfigs.set(sheet, { sheet, indicator:sheet, pillar:'Partner', evaluator:'equals1' })
+  })
+  sourceConfigs.forEach(config => {
     const actualName = findSheet(wb, config.sheet)!
     const rows = toRows(wb.Sheets[actualName])
     const ceco = rows[0] ? findKey(rows[0], 'CeCo') : undefined

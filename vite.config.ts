@@ -14,6 +14,7 @@ export default defineConfig({
       includeAssets: [
         'assets/CeNtro Partner.png',
         'data/Base_CeNtro Partner.xlsx',
+        'data/campaign.json',
         'icons/icon-192.png',
         'icons/icon-512.png',
       ],
@@ -36,7 +37,7 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: true,
-        globPatterns: ['**/*.{js,css,html,png,svg,webmanifest,xlsx}'],
+        globPatterns: ['**/*.{js,css,html,json,png,svg,webmanifest,xlsx}'],
         navigateFallback: 'index.html',
         runtimeCaching: [
           {

@@ -10,12 +10,9 @@ export interface IndicatorConfig {
 export const INDICATORS: IndicatorConfig[] = [
   { sheet:'Rotacion', indicator:'Rotacion', pillar:'Partner', evaluator:'lte36pct' },
   { sheet:'Bajas<90', indicator:'Bajas<90', pillar:'Partner', evaluator:'lte0' },
-  { sheet:'Bajas', indicator:'Bajas', pillar:'Partner', evaluator:'lte1' },
   { sheet:'Estabilidad 12M', indicator:'Estabilidad 12M', pillar:'Partner', evaluator:'equals1' },
   { sheet:'Estabilidad 24M', indicator:'Estabilidad 24M', pillar:'Partner', evaluator:'equals1' },
-  { sheet:'BB', indicator:'BB', pillar:'Partner', evaluator:'equals1' },
-  { sheet:'BT', indicator:'BT', pillar:'Partner', evaluator:'equals1' },
-  { sheet:'SS', indicator:'SS', pillar:'Partner', evaluator:'equals1' },
+  { sheet:'BB', indicator:'Efectividad', pillar:'Partner', evaluator:'equals1' },
   { sheet:'NPS', indicator:'NPS', pillar:'Cliente', evaluator:'gt70' },
   { sheet:'Desempeño', indicator:'Desempeño', pillar:'Cliente', evaluator:'gt70pct' },
   { sheet:'Conexion', indicator:'Conexion', pillar:'Cliente', evaluator:'gt60pct' },
@@ -30,7 +27,9 @@ export const INDICATORS: IndicatorConfig[] = [
 ]
 
 export const PILLARS: Exclude<Pillar,'Todos'>[] = ['Partner','Cliente','Negocio']
-export const REQUIRED_SHEETS = ['Directorio','Instrucciones',...INDICATORS.map(i=>i.sheet)]
+export const EFFECTIVENESS_SHEETS = ['BB','BT','SS'] as const
+export const REQUIRED_SHEETS = ['Directorio','Instrucciones',...INDICATORS.map(i=>i.sheet),...EFFECTIVENESS_SHEETS]
+  .filter((sheet,index,sheets) => sheets.indexOf(sheet) === index)
 export const PERIODS = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic','YTD'] as const
 
 export const normalize = (value: unknown) => String(value ?? '')

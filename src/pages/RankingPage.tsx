@@ -18,7 +18,7 @@ const visibleIndicatorNames: Record<string,string> = {
 }
 
 type SortDirection = 'desc'|'asc'
-type SortColumn = 'rank'|'compliance'|'Rotacion'|'Conexion'|'Bebida'|'OMT'|'COGS'|'Segundas Cx'
+type SortColumn = 'rank'|'compliance'|'Efectividad'|'Rotacion'|'Conexion'|'Bebida'|'OMT'|'COGS'|'Segundas Cx'
 
 function isExplicitNA(value: unknown) { return typeof value === 'string' && /^\s*n\/?a\s*$/i.test(value) }
 function formatValue(item: IndicatorValue) {
@@ -222,7 +222,7 @@ export function RankingPage() {
         const current = indicatorMap.get(indicator.indicator) ?? indicator
         const address = XLSX.utils.encode_cell({ r:rowIndex + 2, c:indicatorIndex + 1 })
         const cell = worksheet[address] as XLSX.CellObject & { c?: Array<{ a:string; t:string }> }
-        if (cell) cell.c = [{ a:'CeNtro Partner', t:`Estado: ${stateLabel(current)}` }]
+        if (cell) cell.c = [{ a:'CeNtro Partner', t:current.detailValue ?? `Estado: ${stateLabel(current)}` }]
       })
     })
 
@@ -301,7 +301,7 @@ export function RankingPage() {
             return count ? <th key={group} colSpan={count} className={`group-${group.toLowerCase()}`}>{group}</th> : null
           })}<th colSpan={1} className="group-gestion">Gestión</th></tr>
           <tr className="indicator-header-row">{displayedIndicators.map(indicator => {
-            const sortable = ['Rotacion','Conexion','Bebida','OMT','COGS','Segundas Cx'].includes(indicator.indicator)
+            const sortable = ['Efectividad','Rotacion','Conexion','Bebida','OMT','COGS','Segundas Cx'].includes(indicator.indicator)
             const active = sortColumn === indicator.indicator
             return <th key={indicator.indicator} className={`indicator-header ${sortable ? 'is-sortable' : ''}`}>
               {sortable ? <button type="button" onClick={() => toggleIndicatorSort(indicator.indicator as SortColumn)} className="indicator-sort-button" title={active && sortDirection === 'asc' ? 'Ordenar de mayor a menor' : 'Ordenar de menor a mayor'}>
@@ -314,7 +314,7 @@ export function RankingPage() {
           return <tr key={store.CeCo}><td className="sticky-col store-col font-semibold text-slate-900"><span className="store-position">{index + 1}</span><span className="store-name">{store.Tienda}</span></td>
             {displayedIndicators.map(indicator => {
               const current = indicatorMap.get(indicator.indicator) ?? indicator
-              return <td key={current.indicator} className={stateClass(current)}>{formatValue(current)}</td>
+              return <td key={current.indicator} className={stateClass(current)} title={current.detailValue}>{formatValue(current)}</td>
             })}<td
               className="compliance-cell"
               style={complianceQuartileStyle(store.compliance, quartiles)}
