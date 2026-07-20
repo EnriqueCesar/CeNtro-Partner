@@ -13,8 +13,10 @@ const areas: Area[] = ['Todos','Ops','RH']
 const percentIndicators = new Set(['Rotacion','Estabilidad 12M','Estabilidad 24M','Desempeño','Conexion','Bebida','SR%','VMT%','ppto%','AT%','COGS'])
 const clientIndicatorOrder = ['NPS','Conexion','Desempeño','Bebida','SR%']
 const visibleIndicatorNames: Record<string,string> = {
+  'Rotacion':'Rotación',
   'Estabilidad 12M':'E-12M',
   'Estabilidad 24M':'E-24M',
+  'Conexion':'Conexión',
 }
 
 type SortDirection = 'desc'|'asc'
@@ -130,7 +132,7 @@ export function RankingPage() {
         if (!visibleNames.has(indicator.indicator)) return count
         return indicator.status === 'blank' ? count + 1 : count
       }, 0)
-      return blankCount <= 5
+      return blankCount < 9
     })
   }, [stores, displayedIndicators, hideIncomplete])
 
@@ -160,11 +162,16 @@ export function RankingPage() {
     [visibleStores],
   )
 
+  const bestVisibleStore = useMemo(() => [...visibleStores].sort((a,b) =>
+    b.compliance - a.compliance
+    || b.applicable - a.applicable
+    || a.Tienda.trim().localeCompare(b.Tienda.trim(), 'es')
+  )[0], [visibleStores])
+
   if (stage !== 'ready' && stage !== 'error' && !data) return <LoadingPanel stage={stage} />
   if (stage === 'error') return <RecoveryPanel message={error} onRetry={retry} />
 
   const average = stores.length ? stores.reduce((sum,store) => sum + store.compliance, 0) / stores.length : 0
-  const best = stores[0]
   const activeGroups = pillar === 'Todos' ? (['Partner','Cliente','Negocio'] as const) : ([pillar] as const)
   const title = selectionLabel(selectedPeriods)
   function toggleIndicatorSort(indicator: SortColumn) {
@@ -236,7 +243,7 @@ export function RankingPage() {
       <StatCard label="Total de tiendas" value={stores.length} icon={Building2} />
       <StatCard label="Total de indicadores" value={visibleIndicatorCount} icon={ListChecks} />
       <StatCard label="Promedio de cumplimiento" value={`${(average * 100).toFixed(1)}%`} icon={CircleGauge} />
-      <StatCard label="Mejor tienda" value={best?.Tienda ?? '—'} icon={Trophy} />
+      <StatCard label="Mejor tienda" value={bestVisibleStore?.Tienda.trim() ?? '—'} icon={Trophy} />
     </section>
 
     <section className="ranking-filters card mb-5 py-4">
@@ -289,7 +296,7 @@ export function RankingPage() {
         <div><p className="eyebrow">Clasificación dinámica</p><h2 className="section-title">Ranking Regional</h2></div>
         <div className="flex items-center gap-2">
           {presentationMode ? <button type="button" onClick={() => setPresentationMode(false)} className="presentation-exit-button"><X size={15} />Salir de presentación</button> : <button type="button" onClick={() => setPresentationMode(true)} className="presentation-button"><MonitorUp size={15} />Modo Presentación</button>}
-          <button type="button" onClick={() => setHideIncomplete(current => !current)} className={`incomplete-toggle ${hideIncomplete ? 'is-active' : ''}`} aria-pressed={hideIncomplete} title="Oculta tiendas con más de 5 indicadores visibles en blanco"><EyeOff size={15} />Ocultar incompletas</button>
+          <button type="button" onClick={() => setHideIncomplete(current => !current)} className={`incomplete-toggle ${hideIncomplete ? 'is-active' : ''}`} aria-pressed={hideIncomplete} title="Oculta tiendas con 9 o más indicadores visibles en blanco"><EyeOff size={15} />Ocultar incompletos</button>
           <button type="button" onClick={exportRanking} className="secondary-ranking-control inline-flex items-center gap-2 rounded-lg border border-starbucks/20 px-3 py-2 text-xs font-bold text-starbucks hover:bg-starbucks-light"><Download size={15} />Exportar Excel</button>
           <span className="secondary-ranking-control summary-chip">{visibleStores.length} tiendas</span>
         </div>
@@ -306,7 +313,7 @@ export function RankingPage() {
             return <th key={indicator.indicator} className={`indicator-header ${sortable ? 'is-sortable' : ''}`}>
               {sortable ? <button type="button" onClick={() => toggleIndicatorSort(indicator.indicator as SortColumn)} className="indicator-sort-button" title={active && sortDirection === 'asc' ? 'Ordenar de mayor a menor' : 'Ordenar de menor a mayor'}>
                 <span className="indicator-sort-label">{visibleIndicatorName(indicator.indicator)}</span><span className="indicator-sort-icon" aria-hidden="true">{active && (sortDirection === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</span>
-              </button> : <span>{visibleIndicatorName(indicator.indicator)}</span>}
+              </button> : <span className="indicator-static-label">{visibleIndicatorName(indicator.indicator)}</span>}
             </th>
           })}<th className="compliance-header"><button type="button" onClick={toggleComplianceSort} className="inline-flex items-center gap-1.5" title={sortColumn === 'compliance' && sortDirection === 'desc' ? 'Ordenar de menor a mayor' : 'Ordenar de mayor a menor'}>Cumplimiento {sortColumn === 'compliance' && sortDirection === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />}</button></th></tr></thead>
         <tbody>{sortedStores.map((store,index) => {

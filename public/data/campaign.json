@@ -1,20 +1,10 @@
 {
   "campaign": {
-    "brand": "STARBUCKS",
-    "headline": "¡Arrancamos Summer!",
-    "message": "A partir del 20 de julio, llega una temporada llena de frescura, color y momentos especiales.",
-    "serviceMessage": "Recibimos cálidamente a cada cliente, interactuamos con amabilidad y hacemos de cada momento algo especial.",
-    "identity": {
-      "primary": "JUNTÉMONOS",
-      "accent": "más",
-      "primaryColor": "#006241",
-      "accentColor": "#111111",
-      "backgroundColor": "#FFFFFF",
-      "style": "corporativo-expresivo"
-    },
-    "hashtags": [
-      "#GreenApronService",
-      "#JUNTÉMOSCENTROS"
-    ]
+    "primary": "JUNTÉMONOS",
+    "accent": "más",
+    "primaryColor": "#006241",
+    "accentColor": "#111111",
+    "style": "corporativo-expresivo",
+    "regionLabel": "#JUNTÉMONOSCENTROS"
   }
 }

@@ -12,6 +12,12 @@ body{margin:0;min-width:320px}
 .section-heading{@apply mb-0 flex flex-wrap items-center justify-between gap-3}
 .section-title{@apply m-0 text-lg font-bold text-slate-900}
 .eyebrow{@apply mb-1 text-xs font-semibold uppercase tracking-widest text-starbucks}
+.campaign-heading{display:grid;align-items:center;grid-template-columns:auto auto;column-gap:.75rem}
+.campaign-lockup{display:flex;align-items:baseline;gap:.28rem;font-weight:950;letter-spacing:.045em;line-height:1;text-transform:uppercase}
+.campaign-lockup span:first-child{font-size:1rem}
+.campaign-lockup span:last-child{font-size:.9rem;font-style:italic;font-weight:800;text-transform:lowercase}
+.campaign-region{margin:0;font-size:.7rem;font-weight:900;letter-spacing:.13em;line-height:1.25;text-transform:uppercase}
+.campaign-heading h1{grid-column:1/-1;margin-top:.2rem}
 .summary-chip{@apply rounded-full bg-starbucks-light px-3 py-1 text-xs font-bold text-starbucks-dark}
 .recovery-card{@apply mx-auto flex max-w-2xl flex-col items-start gap-4 rounded-3xl border border-amber-200 bg-white p-7 text-amber-700}
 .status-row{@apply flex items-center gap-3 rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-400}
@@ -42,18 +48,20 @@ body{margin:0;min-width:320px}
   width:46px;
   min-width:46px;
   max-width:46px;
-  height:132px;
-  padding:.45rem .2rem;
-  vertical-align:bottom;
-  overflow:visible;
+  height:144px;
+  padding:.5rem .18rem;
+  vertical-align:middle;
+  overflow:hidden;
 }
-.ranking-table .indicator-header>span{
-  display:inline-block;
+.indicator-static-label,.indicator-sort-label{
+  display:block;
   writing-mode:vertical-rl;
   transform:rotate(180deg);
   white-space:nowrap;
   line-height:1;
-  text-align:left;
+  text-align:center;
+  font-size:.8rem;
+  font-weight:900;
 }
 .ranking-table td.indicator-cell{
   width:46px;
@@ -74,12 +82,12 @@ body{margin:0;min-width:320px}
   min-width:280px!important;
   max-width:310px;
 }
-.ranking-table .store-header{font-size:.78rem;letter-spacing:.055em}
+.ranking-table .store-header{font-size:.9rem;letter-spacing:.06em;text-align:center!important;vertical-align:middle}
 .ranking-table td.store-col{vertical-align:middle;line-height:1.25}
 .store-position{display:inline-grid;place-items:center;margin-right:.65rem;vertical-align:middle;min-width:28px;height:28px;border-radius:999px;background:#e7f3ed;color:#006241;font-size:.75rem;font-weight:900}
 .store-name{vertical-align:middle;overflow-wrap:anywhere}
 .indicator-sort-button{display:inline-flex;height:100%;align-items:flex-end;justify-content:center;gap:.3rem;color:inherit;font:inherit;text-transform:inherit;letter-spacing:inherit;cursor:pointer}
-.indicator-sort-button span{font-size:.74rem;font-weight:900}
+.indicator-sort-button span{font-size:.8rem;font-weight:900}
 .indicator-sort-button svg{flex:0 0 auto;margin-bottom:.05rem}
 .ranking-table .indicator-header.is-sortable{background:#f1f5f3}
 .group-row th{
@@ -186,17 +194,12 @@ body{margin:0;min-width:320px}
   padding:0;
 }
 .indicator-sort-label{
-  writing-mode:vertical-rl;
-  transform:rotate(180deg);
-  white-space:nowrap;
-  line-height:1;
-  font-size:.74rem;
-  font-weight:900;
+  margin:auto;
 }
 .indicator-sort-icon{
   position:absolute;
-  right:2px;
-  bottom:3px;
+  right:3px;
+  bottom:4px;
   display:grid;
   width:13px;
   height:13px;
@@ -207,9 +210,4 @@ body{margin:0;min-width:320px}
   .ranking-table .store-col{width:220px;min-width:220px!important;max-width:238px}
   .store-name{font-size:.82rem}
   .incomplete-toggle{padding:.45rem .6rem}
-}
-.ranking-table .indicator-header>.indicator-sort-icon{
-  writing-mode:horizontal-tb;
-  transform:none;
-  line-height:1;
 }

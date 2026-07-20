@@ -47,21 +47,12 @@ const ratio = (value: unknown) => {
   return Math.abs(number) > 1.5 ? number / 100 : number
 }
 
-type CourseRatio = { completed:number; possible:number }
-const courseRatio = (value: unknown): CourseRatio | null => {
+const percentageValue = (value: unknown): number | null => {
   if (isBlank(value) || isExplicitNA(value)) return null
-  const text = String(value).trim().replace(/\u00a0/g,'')
-  const fraction = text.match(/^(\d+(?:[.,]\d+)?)\s*\/\s*(\d+(?:[.,]\d+)?)$/)
-  if (fraction) {
-    const completed = Number(fraction[1].replace(',','.'))
-    const possible = Number(fraction[2].replace(',','.'))
-    return Number.isFinite(completed) && Number.isFinite(possible) && possible > 0
-      ? { completed:Math.min(Math.max(completed, 0), possible), possible }
-      : null
-  }
-  const completed = numeric(value)
-  if (completed === null || completed < 0 || completed > 1) return null
-  return { completed, possible:1 }
+  const number = numeric(value)
+  if (number === null) return null
+  const percentage = Math.abs(number) > 1 ? number / 100 : number
+  return percentage >= 0 && percentage <= 1 ? percentage : null
 }
 
 function evaluate(config: IndicatorConfig, value: unknown): number | null {
@@ -161,8 +152,8 @@ function aggregateEvaluable(config: IndicatorConfig, instruction: Instruction, v
 function buildEffectiveness(source: WorkbookSource, config: IndicatorConfig, ceco: string, selection: Period[]): IndicatorValue {
   const months = selectedMonths(selection)
   const details: string[] = []
-  let completed = 0
-  let possible = 0
+  let total = 0
+  let valueCount = 0
   const areas = new Set<IndicatorArea>()
   const rules: string[] = []
   const multipleMonthLogic: string[] = []
@@ -176,34 +167,34 @@ function buildEffectiveness(source: WorkbookSource, config: IndicatorConfig, cec
     if (instruction?.multipleMonthLogic) multipleMonthLogic.push(`${sheetName}: ${instruction.multipleMonthLogic}`)
     if (instruction?.ytdLogic) ytdLogic.push(`${sheetName}: ${instruction.ytdLogic}`)
 
-    let sheetCompleted = 0
-    let sheetPossible = 0
+    let sheetTotal = 0
+    let sheetValueCount = 0
     if (sheet?.cecoKey) {
       const values = valuesForStore(sheet, ceco, months)
       months.forEach(month => {
-        const parsed = courseRatio(values.get(month))
-        if (!parsed) return
-        sheetCompleted += parsed.completed
-        sheetPossible += parsed.possible
+        const percentage = percentageValue(values.get(month))
+        if (percentage === null) return
+        sheetTotal += percentage
+        sheetValueCount += 1
       })
     }
-    completed += sheetCompleted
-    possible += sheetPossible
-    details.push(`${sheetName} ${sheetPossible ? `${sheetCompleted}/${sheetPossible}` : 'N/A'}`)
+    total += sheetTotal
+    valueCount += sheetValueCount
+    details.push(`${sheetName} ${sheetValueCount ? `${Math.round((sheetTotal / sheetValueCount) * 100)}% (${sheetValueCount})` : 'N/A'}`)
   })
 
-  if (!possible) return {
+  if (!valueCount) return {
     sheet:'BB, BT, SS', indicator:'Efectividad', pillar:config.pillar, areas:[...areas],
     rule:rules.join(' · '), multipleMonthLogic:multipleMonthLogic.join(' · '), ytdLogic:ytdLogic.join(' · '),
     value:null, displayValue:'N/A', detailValue:`${details.join(' · ')} · Total: N/A`, score:null,
     fulfilled:0, applicable:0, status:'na',
   }
-  const score = completed / possible
+  const score = total / valueCount
   return {
     sheet:'BB, BT, SS', indicator:'Efectividad', pillar:config.pillar, areas:[...areas],
     rule:rules.join(' · '), multipleMonthLogic:multipleMonthLogic.join(' · '), ytdLogic:ytdLogic.join(' · '),
     value:score, displayValue:`${Math.round(score * 100)}%`,
-    detailValue:`${details.join(' · ')} · Total: ${completed}/${possible}`,
+    detailValue:`${details.join(' · ')} · Promedio: ${Math.round(score * 100)}% (${valueCount} ${valueCount === 1 ? 'valor' : 'valores'})`,
     score, fulfilled:score, applicable:1, status:score === 1 ? 'cumple' : 'no-cumple',
   }
 }
