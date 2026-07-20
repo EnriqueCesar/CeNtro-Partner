@@ -5,8 +5,9 @@
 :root{font-family:Inter,Aptos,"Segoe UI",sans-serif;color:#17211d;background:#f6f8f7;font-synthesis:none}
 *{box-sizing:border-box}
 body{margin:0;min-width:320px}
-.card{@apply rounded-2xl border border-slate-200 bg-white p-5}
+.card{@apply rounded-2xl border border-slate-200 bg-white p-5;contain:layout}
 .control{@apply mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 outline-none transition focus:border-starbucks focus:ring-2 focus:ring-starbucks/10}
+.control:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid rgba(0,98,65,.22);outline-offset:2px}
 .filter-label{@apply text-xs font-semibold uppercase tracking-wide text-slate-500}
 .primary-button{@apply inline-flex items-center justify-center gap-2 rounded-xl bg-starbucks px-4 py-2.5 text-sm font-bold text-white transition hover:bg-starbucks-dark}
 .section-heading{@apply mb-0 flex flex-wrap items-center justify-between gap-3}
@@ -18,13 +19,19 @@ body{margin:0;min-width:320px}
 .campaign-lockup span:last-child{font-size:.9rem;font-style:italic;font-weight:800;text-transform:lowercase}
 .campaign-region{margin:0;font-size:.7rem;font-weight:900;letter-spacing:.13em;line-height:1.25;text-transform:uppercase}
 .campaign-heading h1{grid-column:1/-1;margin-top:.2rem}
+.app-logo{border-radius:50%;background:#fff}
+.app-status{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:.5rem}
+.network-status,.update-status{border-radius:999px;padding:.45rem .7rem;font-size:.72rem;font-weight:850;white-space:nowrap}
+.network-status.is-offline{border:1px solid #f2b8b5;background:#fff1f0;color:#9f241b}
+.update-status{border:1px solid #70ad91;background:#e7f3ed;color:#006241;cursor:pointer}
+.update-status:hover{background:#d8ece2}
 .summary-chip{@apply rounded-full bg-starbucks-light px-3 py-1 text-xs font-bold text-starbucks-dark}
 .recovery-card{@apply mx-auto flex max-w-2xl flex-col items-start gap-4 rounded-3xl border border-amber-200 bg-white p-7 text-amber-700}
 .status-row{@apply flex items-center gap-3 rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-400}
 .status-row.active{@apply border-starbucks/30 bg-starbucks-light text-starbucks}
 .status-row.done{@apply border-emerald-200 bg-emerald-50 text-emerald-700}
 .status-dot{@apply h-5 w-5 rounded-full border-2 border-current}
-.ranking-scroll{overflow-x:auto;overscroll-behavior-inline:contain;scrollbar-gutter:stable}
+.ranking-scroll{overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable;-webkit-overflow-scrolling:touch}
 .ranking-table{width:max-content;min-width:100%;border-collapse:separate;border-spacing:0;text-align:center;font-size:.78rem}
 .ranking-table th{white-space:nowrap;border-right:1px solid #e2e8f0;border-bottom:1px solid #cbd5e1;padding:.7rem .65rem;background:#f8fafc;color:#475569;font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.035em}
 .ranking-table td{min-width:88px;border-right:1px solid #edf2f7;border-bottom:1px solid #edf2f7;padding:.65rem;white-space:nowrap;background:#fff}
@@ -49,12 +56,15 @@ body{margin:0;min-width:320px}
   min-width:46px;
   max-width:46px;
   height:144px;
-  padding:.5rem .18rem;
+  padding:0;
   vertical-align:middle;
   overflow:hidden;
 }
 .indicator-static-label,.indicator-sort-label{
-  display:block;
+  display:grid;
+  width:100%;
+  height:100%;
+  place-items:center;
   writing-mode:vertical-rl;
   transform:rotate(180deg);
   white-space:nowrap;
@@ -86,7 +96,6 @@ body{margin:0;min-width:320px}
 .ranking-table td.store-col{vertical-align:middle;line-height:1.25}
 .store-position{display:inline-grid;place-items:center;margin-right:.65rem;vertical-align:middle;min-width:28px;height:28px;border-radius:999px;background:#e7f3ed;color:#006241;font-size:.75rem;font-weight:900}
 .store-name{vertical-align:middle;overflow-wrap:anywhere}
-.indicator-sort-button{display:inline-flex;height:100%;align-items:flex-end;justify-content:center;gap:.3rem;color:inherit;font:inherit;text-transform:inherit;letter-spacing:inherit;cursor:pointer}
 .indicator-sort-button span{font-size:.8rem;font-weight:900}
 .indicator-sort-button svg{flex:0 0 auto;margin-bottom:.05rem}
 .ranking-table .indicator-header.is-sortable{background:#f1f5f3}
@@ -104,7 +113,7 @@ body{margin:0;min-width:320px}
     width:42px;
     min-width:42px;
     max-width:42px;
-    height:122px;
+    height:136px;
   }
   .ranking-table td.indicator-cell{
     width:42px;
@@ -185,13 +194,17 @@ body{margin:0;min-width:320px}
 .store-name{font-size:.88rem;font-weight:800;line-height:1.25}
 .indicator-sort-button{
   position:relative;
-  display:flex;
+  display:grid;
   width:100%;
   height:100%;
-  align-items:center;
-  justify-content:center;
+  place-items:center;
   gap:0;
   padding:0;
+  color:inherit;
+  font:inherit;
+  text-transform:inherit;
+  letter-spacing:inherit;
+  cursor:pointer;
 }
 .indicator-sort-label{
   margin:auto;
@@ -207,7 +220,12 @@ body{margin:0;min-width:320px}
   color:#006241;
 }
 @media(max-width:640px){
+  .app-status{max-width:7.5rem}
+  .network-status,.update-status{font-size:.66rem;padding:.4rem .55rem}
   .ranking-table .store-col{width:220px;min-width:220px!important;max-width:238px}
   .store-name{font-size:.82rem}
   .incomplete-toggle{padding:.45rem .6rem}
+}
+@media(prefers-reduced-motion:no-preference){
+  .card,.control,button{transition:background-color .16s ease,border-color .16s ease,color .16s ease,transform .16s ease}
 }

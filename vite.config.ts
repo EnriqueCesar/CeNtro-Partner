@@ -9,15 +9,8 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       injectRegister: false,
-      includeAssets: [
-        'assets/CeNtro Partner.png',
-        'data/Base_CeNtro Partner.xlsx',
-        'data/campaign.json',
-        'icons/icon-192.png',
-        'icons/icon-512.png',
-      ],
       manifest: {
         id: BASE,
         name: 'CeNtro Partner',
@@ -36,8 +29,8 @@ export default defineConfig({
       workbox: {
         cleanupOutdatedCaches: true,
         clientsClaim: true,
-        skipWaiting: true,
-        globPatterns: ['**/*.{js,css,html,json,png,svg,webmanifest,xlsx}'],
+        skipWaiting: false,
+        globPatterns: ['**/*.{js,css,html,json,png,svg,xlsx}'],
         navigateFallback: 'index.html',
         runtimeCaching: [
           {
@@ -45,9 +38,14 @@ export default defineConfig({
             handler: 'NetworkFirst',
             options: {
               cacheName: 'centro-partner-excel-v2-1',
-              networkTimeoutSeconds: 8,
+              networkTimeoutSeconds: 4,
               expiration: { maxEntries: 2, maxAgeSeconds: 86400 },
             },
+          },
+          {
+            urlPattern: ({ url }) => url.pathname.endsWith('/data/campaign.json'),
+            handler: 'StaleWhileRevalidate',
+            options: { cacheName:'centro-partner-campaign-v1' },
           },
         ],
       },

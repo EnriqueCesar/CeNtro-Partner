@@ -3,6 +3,22 @@ import type { Area, IndicatorValue, LoadStage, Month, Period, Pillar, StoreResul
 import { loadDefault } from '../services/excelService'
 
 const ALL_MONTHS: Month[] = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
+const FILTER_STORAGE_KEY = 'centro-partner-filters-v1'
+type SavedFilters = { selectedPeriods?:Period[]; pillar?:Pillar; region?:string; dm?:string; area?:Area }
+
+function readSavedFilters(): SavedFilters {
+  try {
+    const saved = JSON.parse(localStorage.getItem(FILTER_STORAGE_KEY) ?? '{}') as SavedFilters
+    const validPeriods = (saved.selectedPeriods ?? []).filter(period => period === 'YTD' || ALL_MONTHS.includes(period as Month))
+    return {
+      selectedPeriods:validPeriods.length ? validPeriods : undefined,
+      pillar:['Todos','Partner','Cliente','Negocio'].includes(saved.pillar ?? '') ? saved.pillar : undefined,
+      region:typeof saved.region === 'string' ? saved.region : undefined,
+      dm:typeof saved.dm === 'string' ? saved.dm : undefined,
+      area:['Todos','Ops','RH'].includes(saved.area ?? '') ? saved.area : undefined,
+    }
+  } catch { return {} }
+}
 
 type Ctx = {
   data: WorkbookResult | null
@@ -38,14 +54,15 @@ function summarizeIndicators(indicators: IndicatorValue[]) {
 }
 
 export function DataProvider({ children }: { children: ReactNode }) {
+  const [savedFilters] = useState(readSavedFilters)
   const [data, setData] = useState<WorkbookResult | null>(null)
   const [stage, setStage] = useState<LoadStage>('idle')
   const [error, setError] = useState('')
-  const [selectedPeriods, setSelectedPeriods] = useState<Period[]>(['YTD'])
-  const [pillar, setPillar] = useState<Pillar>('Todos')
-  const [region, setRegion] = useState('Todas')
-  const [dm, setDm] = useState('Todos')
-  const [area, setArea] = useState<Area>('Todos')
+  const [selectedPeriods, setSelectedPeriods] = useState<Period[]>(savedFilters.selectedPeriods ?? ['YTD'])
+  const [pillar, setPillar] = useState<Pillar>(savedFilters.pillar ?? 'Todos')
+  const [region, setRegion] = useState(savedFilters.region ?? 'Todas')
+  const [dm, setDm] = useState(savedFilters.dm ?? 'Todos')
+  const [area, setArea] = useState<Area>(savedFilters.area ?? 'Todos')
 
   const load = useCallback(async () => {
     setError('')
@@ -62,6 +79,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, [selectedPeriods])
 
   useEffect(() => { void load() }, [load])
+
+  useEffect(() => {
+    const reloadOnReconnect = () => void load()
+    window.addEventListener('online', reloadOnReconnect)
+    return () => window.removeEventListener('online', reloadOnReconnect)
+  }, [load])
+
+  useEffect(() => {
+    try { localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify({ selectedPeriods, pillar, region, dm, area })) }
+    catch { /* Persistencia progresiva; la aplicación sigue funcionando sin almacenamiento. */ }
+  }, [selectedPeriods, pillar, region, dm, area])
 
   const togglePeriod = useCallback((value: Period) => {
     setSelectedPeriods(current => {

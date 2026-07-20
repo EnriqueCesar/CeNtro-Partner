@@ -5,7 +5,12 @@ import App from './App'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import './index.css'
 
-declare global { interface Window { __CENTRO_BOOT_TIMER__?: number } }
+declare global {
+  interface Window {
+    __CENTRO_BOOT_TIMER__?: number
+    __CENTRO_UPDATE_SW__?: () => Promise<void>
+  }
+}
 
 function showBootError(message: string) {
   const root = document.getElementById('root')
@@ -25,11 +30,17 @@ try {
   )
 
   window.setTimeout(() => {
-    registerSW({
+    const updateSW = registerSW({
       immediate: true,
-      onRegisteredSW(_, registration) { registration?.update().catch(console.error) },
+      onNeedRefresh() { window.dispatchEvent(new Event('centro:update-available')) },
+      onOfflineReady() { window.dispatchEvent(new Event('centro:offline-ready')) },
+      onRegisteredSW(_, registration) {
+        registration?.update().catch(console.error)
+        window.setInterval(() => registration?.update().catch(console.error), 60 * 60 * 1000)
+      },
       onRegisterError(error) { console.error('PWA registration error', error) },
     })
+    window.__CENTRO_UPDATE_SW__ = () => updateSW(true)
   }, 1000)
 } catch (error) {
   console.error('CeNtro Partner bootstrap error', error)
