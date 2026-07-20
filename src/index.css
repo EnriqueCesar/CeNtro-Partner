@@ -8,6 +8,20 @@ body{margin:0;min-width:320px}
 .card{@apply rounded-2xl border border-slate-200 bg-white p-5;contain:layout}
 .control{@apply mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 outline-none transition focus:border-starbucks focus:ring-2 focus:ring-starbucks/10}
 .control:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid rgba(0,98,65,.22);outline-offset:2px}
+.ranking-filters{position:relative;z-index:10;overflow:visible;contain:none}
+.month-picker{position:relative;z-index:1;min-width:0;font-size:.875rem;font-weight:600;letter-spacing:normal;text-transform:none}
+.month-picker.is-open{z-index:1001}
+.month-picker-trigger{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-top:0;border-color:#78a995;cursor:pointer;text-align:left}
+.month-picker-trigger span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.month-picker-trigger svg{flex:none;transition:transform .14s ease}.month-picker.is-open .month-picker-trigger svg{transform:rotate(180deg)}
+.month-picker-menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:2000;width:max(100%,19rem);max-width:min(23rem,calc(100vw - 2rem));padding:.75rem;border:1px solid #78a995;border-radius:1rem;background:#fff;box-shadow:0 8px 20px rgba(15,23,42,.1)}
+.month-picker-actions{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.65rem}
+.month-picker-actions button{min-height:42px;border:1px solid #cbd5e1;border-radius:.65rem;background:#fff;padding:.5rem .65rem;color:#475569;font-size:.75rem;font-weight:800;cursor:pointer}
+.month-picker-actions button:first-child{border-color:#8ab4a3;color:#006241}.month-picker-actions button:hover{background:#f3f8f5}
+.month-picker-options{display:grid;max-height:17.5rem;overflow-y:auto;overscroll-behavior:contain;gap:.35rem;padding-right:.15rem;scrollbar-gutter:stable}
+.month-picker-option{display:flex;align-items:center;gap:.65rem;width:100%;min-height:42px;border:1px solid transparent;border-radius:.65rem;background:#fff;padding:.5rem .7rem;color:#475569;font-size:.8rem;font-weight:800;text-align:left;cursor:pointer}
+.month-picker-option:hover{background:#f8fafc}.month-picker-option.is-selected{border-color:#8ab4a3;background:#e7f3ed;color:#006241}
+.month-picker-check{display:grid;width:1.2rem;height:1.2rem;flex:none;place-items:center;border:1px solid #94a3b8;border-radius:.3rem;background:#fff}.month-picker-option.is-selected .month-picker-check{border-color:#006241;background:#006241;color:#fff}
 .filter-label{@apply text-xs font-semibold uppercase tracking-wide text-slate-500}
 .primary-button{@apply inline-flex items-center justify-center gap-2 rounded-xl bg-starbucks px-4 py-2.5 text-sm font-bold text-white transition hover:bg-starbucks-dark}
 .section-heading{@apply mb-0 flex flex-wrap items-center justify-between gap-3}
@@ -49,6 +63,11 @@ body{margin:0;min-width:320px}
 .compliance-cell{background:#f0f8f4!important;min-width:112px!important}
 .compliance-badge{display:inline-flex;border-radius:999px;background:#006241;color:#fff;padding:.4rem .65rem;font-weight:800}
 @media(max-width:640px){.card{@apply rounded-xl}.store-col{min-width:220px!important;max-width:250px}.ranking-table th,.ranking-table td{padding:.55rem .5rem}}
+@media(max-width:640px){
+  .month-picker-menu{position:fixed;top:auto;right:.75rem;bottom:.75rem;left:.75rem;width:auto;max-width:none;max-height:min(75vh,34rem);padding:.85rem;border-radius:1rem}
+  .month-picker-options{max-height:calc(min(75vh,34rem) - 4.8rem)}
+  .month-picker-actions button,.month-picker-option{min-height:46px}
+}
 
 /* Compact ranking layout: vertical indicator headers only. */
 .ranking-table .indicator-header{

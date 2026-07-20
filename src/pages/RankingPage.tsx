@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import * as XLSX from 'xlsx'
 import { ArrowDown, ArrowUp, Building2, Check, ChevronDown, CircleGauge, Download, EyeOff, ListChecks, MonitorUp, Trophy, X } from 'lucide-react'
 import { LoadingPanel } from '../components/LoadingPanel'
@@ -58,7 +58,8 @@ function selectionLabel(selection: Period[]) {
   if (selection.includes('YTD')) return 'YTD'
   if (!selection.length) return 'Selecciona meses'
   if (selection.length === 12) return 'Todos los meses'
-  return selection.map(period => period.toUpperCase()).join(', ')
+  if (selection.length <= 3) return selection.map(period => period.toUpperCase()).join(', ')
+  return `${selection.length} meses seleccionados`
 }
 function visibleIndicatorName(indicator: string) {
   return visibleIndicatorNames[indicator] ?? indicator
@@ -109,6 +110,102 @@ function complianceQuartileStyle(value: number, quartiles: ComplianceQuartiles):
     '--compliance-border':palette.border,
     '--compliance-progress':`${Math.max(0, Math.min(100, value * 100))}%`,
   } as CSSProperties
+}
+
+type MonthPickerProps = {
+  selectedPeriods: Period[]
+  togglePeriod: (value: Period) => void
+  selectAllMonths: () => void
+  clearMonths: () => void
+}
+
+function MonthPicker({ selectedPeriods, togglePeriod, selectAllMonths, clearMonths }: MonthPickerProps) {
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const menuId = useId()
+  const title = selectionLabel(selectedPeriods)
+
+  useEffect(() => {
+    if (!open) return
+    const closeOutside = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false)
+    }
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      setOpen(false)
+      triggerRef.current?.focus()
+    }
+    document.addEventListener('pointerdown', closeOutside)
+    document.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.removeEventListener('pointerdown', closeOutside)
+      document.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [open])
+
+  function focusOption(index: number) {
+    const options = Array.from(menuRef.current?.querySelectorAll<HTMLButtonElement>('[data-month-option]') ?? [])
+    if (!options.length) return
+    options[(index + options.length) % options.length].focus()
+  }
+
+  function handleMenuKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
+    if (!['ArrowDown','ArrowUp','Home','End'].includes(event.key)) return
+    event.preventDefault()
+    const options = Array.from(menuRef.current?.querySelectorAll<HTMLButtonElement>('[data-month-option]') ?? [])
+    const current = options.indexOf(document.activeElement as HTMLButtonElement)
+    if (event.key === 'Home') return focusOption(0)
+    if (event.key === 'End') return focusOption(options.length - 1)
+    focusOption(current + (event.key === 'ArrowDown' ? 1 : -1))
+  }
+
+  function openWithKeyboard(event: ReactKeyboardEvent<HTMLButtonElement>) {
+    if (!['ArrowDown','ArrowUp'].includes(event.key)) return
+    event.preventDefault()
+    setOpen(true)
+    requestAnimationFrame(() => focusOption(event.key === 'ArrowDown' ? 0 : 12))
+  }
+
+  const periodOptions: Period[] = ['YTD', ...months]
+  return <div ref={rootRef} className={`month-picker mt-1 ${open ? 'is-open' : ''}`}>
+    <button
+      ref={triggerRef}
+      type="button"
+      className="control month-picker-trigger"
+      aria-haspopup="dialog"
+      aria-expanded={open}
+      aria-controls={menuId}
+      onClick={() => setOpen(current => !current)}
+      onKeyDown={openWithKeyboard}
+    >
+      <span>{title}</span><ChevronDown size={17} aria-hidden="true" />
+    </button>
+    {open && <div id={menuId} ref={menuRef} className="month-picker-menu" role="dialog" aria-label="Seleccionar meses" onKeyDown={handleMenuKeyDown}>
+      <div className="month-picker-actions">
+        <button type="button" onClick={selectAllMonths}>Seleccionar todo</button>
+        <button type="button" onClick={clearMonths}>Limpiar selección</button>
+      </div>
+      <div className="month-picker-options" aria-label="Periodos disponibles">
+        {periodOptions.map(period => {
+          const selected = selectedPeriods.includes(period)
+          return <button
+            key={period}
+            type="button"
+            role="checkbox"
+            aria-checked={selected}
+            data-month-option
+            className={`month-picker-option ${selected ? 'is-selected' : ''}`}
+            onClick={() => togglePeriod(period)}
+          >
+            <span className="month-picker-check" aria-hidden="true">{selected ? <Check size={16} /> : null}</span>
+            <span>{period === 'YTD' ? period : period.toUpperCase()}</span>
+          </button>
+        })}
+      </div>
+    </div>}
+  </div>
 }
 
 export function RankingPage() {
@@ -251,29 +348,7 @@ export function RankingPage() {
         <div className="min-w-48"><p className="eyebrow">Vista ejecutiva</p><h2 className="section-title">Resultados {title}</h2></div>
         <div className="grid w-full gap-3 sm:grid-cols-2 xl:max-w-6xl xl:grid-cols-5">
           <div className="filter-label">Mes
-            <details className="month-picker group relative mt-1">
-              <summary className="control flex cursor-pointer list-none items-center justify-between normal-case tracking-normal">
-                <span className="truncate">{title}</span><ChevronDown size={17} className="shrink-0 transition group-open:rotate-180" />
-              </summary>
-              <div className="absolute right-0 z-20 mt-2 w-full min-w-64 rounded-xl border border-slate-200 bg-white p-3 normal-case shadow-lg">
-                <div className="mb-3 grid grid-cols-2 gap-2">
-                  <button type="button" onClick={selectAllMonths} className="rounded-lg border border-starbucks/20 px-3 py-2 text-xs font-bold text-starbucks hover:bg-starbucks-light">Seleccionar todo</button>
-                  <button type="button" onClick={clearMonths} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50">Limpiar</button>
-                </div>
-                <label className="mb-2 flex cursor-pointer items-center justify-between rounded-lg border border-starbucks/20 px-3 py-2 text-sm font-bold text-starbucks">
-                  <span>YTD</span><input type="checkbox" checked={selectedPeriods.includes('YTD')} onChange={() => togglePeriod('YTD')} className="sr-only" />
-                  {selectedPeriods.includes('YTD') && <Check size={16} />}
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {months.map(month => {
-                    const selected = selectedPeriods.includes(month)
-                    return <label key={month} className={`flex cursor-pointer items-center justify-between rounded-lg border px-3 py-2 text-xs font-bold ${selected ? 'border-starbucks bg-starbucks-light text-starbucks' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
-                      <span>{month.toUpperCase()}</span><input type="checkbox" checked={selected} onChange={() => togglePeriod(month)} className="sr-only" />{selected && <Check size={14} />}
-                    </label>
-                  })}
-                </div>
-              </div>
-            </details>
+            <MonthPicker selectedPeriods={selectedPeriods} togglePeriod={togglePeriod} selectAllMonths={selectAllMonths} clearMonths={clearMonths} />
           </div>
           <label className="filter-label">Pilar
             <select value={pillar} onChange={event => setPillar(event.target.value as Pillar)} className="control">{pillars.map(value => <option key={value}>{value}</option>)}</select>
