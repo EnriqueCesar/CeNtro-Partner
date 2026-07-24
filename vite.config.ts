@@ -16,6 +16,7 @@ export default defineConfig({
         name: 'CeNtro Partner',
         short_name: 'CeNtro Partner',
         description: 'Ranking regional Ops + RH · Región Centro Norte',
+        lang: 'es-MX',
         start_url: BASE,
         scope: BASE,
         theme_color: '#006241',

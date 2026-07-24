@@ -34,3 +34,12 @@
 ## Observación de rendimiento
 
 El paquete principal conserva `xlsx`, necesario para procesar localmente el libro completo. Se mantuvo en carga inicial para no alterar la lógica ni introducir dependencias o estados intermedios adicionales.
+
+## Optimización controlada — 24 de julio de 2026
+
+- Se agregó la atribución discreta en el pie de página.
+- Se incorporó un acceso secundario y accesible para sugerencias.
+- No existe un canal autorizado en el proyecto; el diálogo informa que está pendiente de configuración y no publica enlaces vacíos.
+- El destino futuro se centralizó en `SUGGESTIONS_CHANNEL_URL`.
+- Se reforzaron áreas táctiles de 44 px, foco visible, cierre con Escape, adaptación móvil y movimiento reducido.
+- Se mantuvieron sin cambios el procesamiento del Excel, filtros, cálculos, exportación, persistencia y rutas de GitHub Pages.
